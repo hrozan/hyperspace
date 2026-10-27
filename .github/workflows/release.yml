@@ -23,9 +23,17 @@ jobs:
           - name: macOS
             os: macos-14
             generator: Ninja
+          # Clang with lld rather than the image's GCC: JUCE builds with LTO,
+          # and GCC's LTO link is the single slowest step in this job.
           - name: Linux
             os: ubuntu-24.04
             generator: Ninja
+            extra_flags: >-
+              -DCMAKE_C_COMPILER=clang
+              -DCMAKE_CXX_COMPILER=clang++
+              -DCMAKE_EXE_LINKER_FLAGS=-fuse-ld=lld
+              -DCMAKE_SHARED_LINKER_FLAGS=-fuse-ld=lld
+              -DCMAKE_MODULE_LINKER_FLAGS=-fuse-ld=lld
           # MSVC via Ninja would need the developer shell sourced first; the
           # Visual Studio generator finds the toolchain on its own.
           - name: Windows
@@ -46,7 +54,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            ccache ninja-build \
+            ccache ninja-build clang lld \
             libasound2-dev libjack-jackd2-dev libcurl4-openssl-dev \
             libfreetype-dev libfontconfig1-dev \
             libgtk-3-dev libwebkit2gtk-4.1-dev \
@@ -90,7 +98,7 @@ jobs:
           cmake -B build -G "${{ matrix.generator }}"
           -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
           -DHYPERSPACE_INSTALL_AFTER_BUILD=OFF
-          ${{ env.CMAKE_LAUNCHER }}
+          ${{ env.CMAKE_LAUNCHER }} ${{ matrix.extra_flags }}
 
       - name: Build
         run: cmake --build build --config ${{ env.BUILD_TYPE }} --parallel
