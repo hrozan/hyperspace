@@ -24,7 +24,7 @@ jobs:
             os: macos-14
             generator: Ninja
           - name: Linux
-            os: ubuntu-22.04
+            os: ubuntu-24.04
             generator: Ninja
           # MSVC via Ninja would need the developer shell sourced first; the
           # Visual Studio generator finds the toolchain on its own.
@@ -35,20 +35,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # JUCE needs the X11, ALSA and FreeType development headers on Linux, and
-      # pkg-configs webkit2gtk even with JUCE_WEB_BROWSER=0 — which is why this
-      # job pins 22.04, the last image that still carries webkit2gtk-4.0.
+      # JUCEUtils.cmake pkg-configs libcurl, webkit2gtk and gtk at include time,
+      # before any NEEDS_WEB_BROWSER / JUCE_USE_CURL setting is consulted, so
+      # those three are configure-time requirements however the plugin is built.
+      # It probes webkit2gtk-4.1 first and only falls back to 4.0, which is what
+      # lets this run on 24.04; 4.0 was the reason to stay on 22.04. No OpenGL
+      # packages: juce_opengl is not in the link list.
       - name: Install Linux dependencies
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
+            ccache ninja-build \
             libasound2-dev libjack-jackd2-dev libcurl4-openssl-dev \
             libfreetype-dev libfontconfig1-dev \
-            libgtk-3-dev libwebkit2gtk-4.0-dev \
+            libgtk-3-dev libwebkit2gtk-4.1-dev \
             libx11-dev libxcomposite-dev libxcursor-dev libxext-dev \
-            libxinerama-dev libxrandr-dev libxrender-dev \
-            libglu1-mesa-dev mesa-common-dev ninja-build
+            libxinerama-dev libxrandr-dev libxrender-dev
 
       - name: Set up Ninja
         if: matrix.generator == 'Ninja' && runner.os != 'Linux'
@@ -63,14 +66,38 @@ jobs:
           key: ${{ runner.os }}-juce-${{ hashFiles('CMakeLists.txt') }}
           restore-keys: ${{ runner.os }}-juce-
 
+      # Compiling JUCE itself is most of the Linux build. ccache turns that into
+      # a cache lookup on every run after the first. Linux only: on macOS the
+      # universal build passes two -arch flags in one invocation, which ccache
+      # will not cache, and MSVC is not a ccache target at all.
+      - name: Cache ccache
+        if: runner.os == 'Linux'
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: ${{ runner.os }}-ccache-${{ github.sha }}
+          restore-keys: ${{ runner.os }}-ccache-
+
+      - name: Configure ccache
+        if: runner.os == 'Linux'
+        run: |
+          ccache --set-config max_size=500M
+          ccache --zero-stats
+          echo "CMAKE_LAUNCHER=-DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache" >> "$GITHUB_ENV"
+
       - name: Configure
         run: >
           cmake -B build -G "${{ matrix.generator }}"
           -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
           -DHYPERSPACE_INSTALL_AFTER_BUILD=OFF
+          ${{ env.CMAKE_LAUNCHER }}
 
       - name: Build
         run: cmake --build build --config ${{ env.BUILD_TYPE }} --parallel
+
+      - name: ccache statistics
+        if: runner.os == 'Linux'
+        run: ccache --show-stats
 
       - name: Test
         run: ctest --test-dir build --build-config ${{ env.BUILD_TYPE }} --output-on-failure

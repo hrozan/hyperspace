@@ -183,10 +183,8 @@ runs when there is something to ship.
 
 **`.github/workflows/ci.yml` — every push and pull request.**
 
-- *Lint.* `clang-format` against `.clang-format`, but only over the lines a commit actually
-  changes, via `git clang-format`. The code predates the config file and reformatting all of it
-  would bury every later review diff under the churn, so the rule applies to new work instead.
-  Plus a whitespace pass: no tabs, no trailing spaces, newline at end of file.
+- *Lint.* `clang-format --dry-run --Werror` over every source file, plus a whitespace pass: no
+  tabs, no trailing spaces, newline at end of file.
 - *Test.* macOS, Linux and Windows, each configuring with `-DHYPERSPACE_BUILD_PLUGIN=OFF`. That
   drops JUCE entirely — the two DSP stages are plain C++20 — so there is no clone, no GUI
   development headers and no cache to warm, and the job finishes in seconds.
@@ -200,22 +198,41 @@ executable bits `zip` does not keep, and `.zip` on Windows. On a tag it then ope
 release and attaches the three archives. The JUCE checkout is cached against the hash of
 `CMakeLists.txt`, so bumping the pinned tag refetches it and nothing else does.
 
+Compiling JUCE is most of the Linux job, so that one also runs through `ccache`, which makes
+every run after the first a cache lookup. macOS is left out because the universal build passes
+two `-arch` flags in a single invocation and ccache will not cache that; MSVC is not a ccache
+target at all.
+
+Three Linux packages are there for the configure step rather than the link: `JUCEUtils.cmake`
+pkg-configs `libcurl`, `webkit2gtk` and `gtk+-x11-3.0` when it is included, before any
+`NEEDS_WEB_BROWSER` or `JUCE_USE_CURL` setting is read, so they are required even though this
+plugin uses none of them. JUCE probes `webkit2gtk-4.1` before falling back to `4.0`, which is
+what lets the job run on `ubuntu-24.04` — `4.0` is gone there.
+
 ```sh
 git tag v0.1.0 && git push origin v0.1.0
 ```
 
 ### Formatting
 
-`.clang-format` is tuned to the style already in the tree — Allman braces, four spaces, a space
-before non-empty argument lists but not `foo()`, aligned consecutive declarations, and no column
-limit, so it never rewraps a line you broke deliberately. Before pushing:
+`.clang-format` is tuned to the style already in the tree: Allman braces, four spaces, a space
+before non-empty argument lists but not `foo()`, a 120-column limit, and `AfterEnum: false`,
+without which clang-format refuses to leave a short `enum class` on one line. Consecutive
+alignment is off — it cannot tell a struct's members from a function's locals, and padding out
+locals is noisier than the hand-aligned columns it replaces.
+
+The whole tree is formatted, so run it over anything you touch before pushing:
 
 ```sh
-git clang-format origin/main
+clang-format -i $(git ls-files 'source/*.cpp' 'source/*.h' 'tests/*.cpp')
 ```
 
 The pinned version is in `ci.yml` (`CLANG_FORMAT_VERSION`); different clang-format releases
 disagree on details, so match it or CI will flag lines your copy is happy with.
+
+One thing the formatter costs: a handful of two-statement accessors that were written inline,
+like `float lowpass (float x, float c) { z += c * (x - z); return z; }`, are now spread over
+five lines. clang-format has no option to keep a multi-statement body on one line.
 
 `tests/DspTests.cpp` drives both DSP stages directly — no JUCE, no host, no audio device. Each
 reverb case feeds an impulse or a sine and then silence, and asserts the output stays finite and
@@ -330,7 +347,7 @@ The editor matches the mockup, mode colours included.
 ```
 CMakeLists.txt            # build definition, JUCE dependency, plugin metadata
 .clangd                   # points clangd at the generated compile database
-.clang-format             # formatting rules, enforced on changed lines by CI
+.clang-format             # formatting rules, enforced tree-wide by CI
 .github/workflows/
   ci.yml                  # lint and DSP tests, every commit
   release.yml             # plugin build and packaging, on a v* tag

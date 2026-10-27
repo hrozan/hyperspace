@@ -20,8 +20,6 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - uses: actions/setup-python@v5
         with:
@@ -30,44 +28,13 @@ jobs:
       - name: Install clang-format
         run: |
           pip install "clang-format==$CLANG_FORMAT_VERSION"
-          sudo curl -fsSL -o /usr/local/bin/git-clang-format \
-            "https://raw.githubusercontent.com/llvm/llvm-project/llvmorg-$CLANG_FORMAT_VERSION/clang/tools/clang-format/git-clang-format"
-          sudo chmod +x /usr/local/bin/git-clang-format
           clang-format --version
 
-      # Only the lines a commit actually touches are checked. The code predates
-      # .clang-format, and reformatting all of it would bury every later review
-      # diff under the churn, so the rule applies to new work instead.
-      - name: clang-format changed lines
+      # The whole tree is formatted, so the whole tree is checked. --Werror turns
+      # any file clang-format would rewrite into a failure and names it.
+      - name: clang-format
         run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            base="${{ github.event.pull_request.base.sha }}"
-          else
-            base="${{ github.event.before }}"
-          fi
-
-          if [ -z "$base" ] || ! git cat-file -e "${base}^{commit}" 2>/dev/null; then
-            base="$(git rev-parse --verify --quiet HEAD~1 || true)"
-          fi
-
-          if [ -z "$base" ]; then
-            echo "No base commit to compare against; nothing to check."
-            exit 0
-          fi
-
-          echo "Checking lines changed since $base"
-          out="$(git clang-format --diff --extensions c,cc,cpp,h,hpp "$base" -- source tests)"
-
-          case "$out" in
-            ''|'no modified files to format'*|'clang-format did not modify any files'*)
-              echo "Formatting clean."
-              ;;
-            *)
-              echo "$out"
-              echo "::error::Changed lines are not clang-format clean. Fix with: git clang-format $base"
-              exit 1
-              ;;
-          esac
+          clang-format --dry-run --Werror $(git ls-files 'source/*.cpp' 'source/*.h' 'tests/*.cpp')
 
       - name: Whitespace hygiene
         run: |
