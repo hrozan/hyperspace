@@ -198,10 +198,27 @@ executable bits `zip` does not keep, and `.zip` on Windows. On a tag it then ope
 release and attaches the three archives. The JUCE checkout is cached against the hash of
 `CMakeLists.txt`, so bumping the pinned tag refetches it and nothing else does.
 
-Compiling JUCE is most of the Linux job, so that one also runs through `ccache`, which makes
-every run after the first a cache lookup. macOS is left out because the universal build passes
-two `-arch` flags in a single invocation and ccache will not cache that; MSVC is not a ccache
-target at all.
+Compiling JUCE is most of the Linux job, so that one runs through `ccache` and builds with
+clang and `lld`. Measured on this repo:
+
+| Linux job | Configure | Build | Total |
+| --- | --- | --- | --- |
+| ubuntu-22.04, gcc, no cache | 33s | 114s | 3m17s |
+| ubuntu-24.04, clang, cold ccache | 48s | 191s | 4m45s |
+| ubuntu-24.04, clang, warm ccache | 21s | 65s | 2m14s |
+
+ccache is what pays: 97 % hits on a warm run. The cold row is the price of filling it, and the
+first run after any JUCE bump pays it again. clang and `lld` were measured on their own and made
+no difference to a cold build (191s against gcc's 182s); they are kept because what is left
+after ccache is mostly the LTO link, which is lld's job, but that part is not separately proven.
+
+macOS is left out of ccache because the universal build passes two `-arch` flags in a single
+invocation and ccache will not cache that; MSVC is not a ccache target at all, which is why
+Windows is now the slowest of the three at around 4m45s.
+
+A caching wrinkle worth knowing: a run on a tag cannot read a cache that only exists on another
+branch, so the `v0.1.0` release built cold. Once `main` has a warm ccache, later tags restore
+from it.
 
 Three Linux packages are there for the configure step rather than the link: `JUCEUtils.cmake`
 pkg-configs `libcurl`, `webkit2gtk` and `gtk+-x11-3.0` when it is included, before any
@@ -210,8 +227,23 @@ plugin uses none of them. JUCE probes `webkit2gtk-4.1` before falling back to `4
 what lets the job run on `ubuntu-24.04` — `4.0` is gone there.
 
 ```sh
-git tag v0.1.0 && git push origin v0.1.0
+git tag -a v0.1.0 -m "..." && git push origin v0.1.0
 ```
+
+### On JUCE build containers
+
+There is no official JUCE CI image, and nothing maintained on ghcr that builds an arbitrary JUCE
+project. The closest thing is [Pamplejuce](https://github.com/sudara/pamplejuce), the de-facto
+community template, which publishes `ghcr.io/sudara/pamplejuce-linux-ci` from a Dockerfile in
+its own repo — but its main workflow does not use that image, it installs the dependencies on a
+bare runner the same way this one does. So a container buys nothing here beyond the 32s `apt`
+step, and ccache already saves twice that.
+
+What Pamplejuce is worth borrowing from is the technique, not the image: `sccache` over `ccache`
+(it uses the Actions cache API directly instead of hand-rolled cache keys, and works on
+Windows/MSVC where ccache does not), `pluginval` as a validation step, and clang-cl on Windows.
+`pluginval` is the obvious next addition here — it is what would catch a host-compatibility bug
+that `ctest` on the bare DSP cannot see.
 
 ### Formatting
 
