@@ -1,0 +1,85 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS
+            os: macos-14
+            generator: Ninja
+          - name: Linux
+            os: ubuntu-22.04
+            generator: Ninja
+          # MSVC via Ninja would need the developer shell sourced first; the
+          # Visual Studio generator finds the toolchain on its own.
+          - name: Windows
+            os: windows-2022
+            generator: Visual Studio 17 2022
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # JUCE needs the X11, ALSA and FreeType development headers on Linux; the
+      # macOS and Windows runners already ship everything it links against.
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libasound2-dev libjack-jackd2-dev libcurl4-openssl-dev \
+            libfreetype-dev libfontconfig1-dev \
+            libgtk-3-dev libwebkit2gtk-4.0-dev \
+            libx11-dev libxcomposite-dev libxcursor-dev libxext-dev \
+            libxinerama-dev libxrandr-dev libxrender-dev \
+            libglu1-mesa-dev mesa-common-dev ninja-build
+
+      - name: Set up Ninja
+        if: matrix.generator == 'Ninja' && runner.os != 'Linux'
+        uses: seanmiddleditch/gha-setup-ninja@v5
+
+      # FetchContent clones JUCE on the first configure, which dominates the run.
+      # Key the cache on the tag pinned in CMakeLists.txt so a bump invalidates it.
+      - name: Cache JUCE
+        uses: actions/cache@v4
+        with:
+          path: build/_deps
+          key: ${{ runner.os }}-juce-${{ hashFiles('CMakeLists.txt') }}
+          restore-keys: ${{ runner.os }}-juce-
+
+      - name: Configure
+        run: >
+          cmake -B build -G "${{ matrix.generator }}"
+          -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
+          -DHYPERSPACE_INSTALL_AFTER_BUILD=OFF
+
+      - name: Build
+        run: cmake --build build --config ${{ env.BUILD_TYPE }} --parallel
+
+      - name: Test
+        run: ctest --test-dir build --build-config ${{ env.BUILD_TYPE }} --output-on-failure
+
+      - name: Upload artefacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Hyperspace-${{ matrix.name }}
+          path: |
+            build/Hyperspace_artefacts/**/VST3/**
+            build/Hyperspace_artefacts/**/Standalone/**
+          if-no-files-found: error

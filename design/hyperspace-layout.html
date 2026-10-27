@@ -1,0 +1,583 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Hyperspace Layout</title>
+<style>
+:root{
+  --bg:#09090b; --panel:#121216; --panel2:#0e0e12; --edge:#2c2c35; --edge2:#000;
+  --teal:#15c6b2; --teal2:#63ead9; --saber:#ff2233; --txt:#eceae6; --mut:#79766f;
+  --disp:#07070a;
+  /* one hue per modulation mode, all at the teal's brightness so the chassis holds */
+  --chorus:#3d9bff;  --chorus2:#8fc4ff;
+  --vibrato:#a97bff; --vibrato2:#cdb0ff;
+  --phaser:#ff8a3d;  --phaser2:#ffb77a;
+  --mode:var(--chorus); --mode2:var(--chorus2);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{width:1040px;height:650px;background:var(--bg);overflow:hidden;
+  font-family:"Avenir Next Condensed","Helvetica Neue",sans-serif;color:var(--txt);
+  -webkit-font-smoothing:antialiased}
+
+/* ---- chassis ---- */
+.unit{position:absolute;inset:0;padding:13px;display:flex;flex-direction:column;gap:9px;
+  background:
+    radial-gradient(130% 90% at 50% -25%, rgba(255,34,51,.12), transparent 62%),
+    radial-gradient(80% 60% at 50% 115%, rgba(21,198,178,.10), transparent 70%),
+    linear-gradient(#131318,#0a0a0d 55%,#07070a);
+}
+.unit::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(0deg,rgba(255,255,255,.016) 0 1px,transparent 1px 3px)}
+
+.pan{position:relative;border-radius:5px;background:linear-gradient(#15151a,#0d0d11);
+  border:1px solid #000;box-shadow:inset 0 1px 0 rgba(255,255,255,.055),0 2px 5px rgba(0,0,0,.6)}
+.hd{display:flex;align-items:center;gap:8px;padding:5px 10px 4px;border-bottom:1px solid #000;
+  box-shadow:0 1px 0 rgba(255,255,255,.045)}
+.hd b{font:600 10px/1 "Avenir Next Condensed";letter-spacing:.22em;color:var(--teal);
+  text-shadow:0 0 9px rgba(21,198,178,.5)}
+.hd b.dim{color:var(--mut);letter-spacing:.16em;text-shadow:none}
+.hd i{flex:1;height:1px;background:linear-gradient(90deg,rgba(21,198,178,.32),transparent)}
+.hd s{width:5px;height:5px;border-radius:50%;background:var(--teal);box-shadow:0 0 7px var(--teal);opacity:.75}
+
+/* ---- header ---- */
+.top{height:70px;display:flex;align-items:center;gap:14px;padding:0 15px;flex:none}
+.mark{width:48px;height:48px;flex:none;filter:drop-shadow(0 0 13px rgba(21,198,178,.5))}
+.name{display:flex;flex-direction:column;gap:3px}
+.name h1{font:400 30px/1 Futura,"Avenir Next",sans-serif;letter-spacing:.17em;
+  background:linear-gradient(#fff,#b9b4ad 48%,#6f6a63);-webkit-background-clip:text;color:transparent;
+  text-shadow:0 0 26px rgba(21,198,178,.32)}
+.name p{font:600 9px/1 "Avenir Next Condensed";letter-spacing:.42em;color:var(--mut)}
+.spacer{flex:1}
+.preset{display:flex;align-items:center;gap:0;border:1px solid #000;border-radius:4px;overflow:hidden;
+  background:linear-gradient(#0b0b0e,#070709);box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+.preset span{padding:0 10px;height:28px;display:flex;align-items:center;color:var(--mut);font:600 13px/1 sans-serif}
+.preset em{padding:0 18px;height:28px;display:flex;align-items:center;font:600 11px/1 "Avenir Next Condensed";
+  letter-spacing:.2em;color:var(--teal2);font-style:normal;border-left:1px solid #000;border-right:1px solid #000;
+  background:var(--disp);text-shadow:0 0 10px rgba(21,198,178,.55);min-width:178px;justify-content:center}
+.picons{display:flex;gap:5px;margin-left:9px}
+.picons i{width:26px;height:26px;display:flex;align-items:center;justify-content:center;
+  border:1px solid #000;border-radius:4px;color:#8d8a84;
+  background:linear-gradient(#131318,#0a0a0d);box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+.picons i:first-child{color:var(--teal)}
+.picons svg{width:15px;height:15px}
+.pw{display:flex;flex-direction:column;align-items:center;gap:5px;margin-left:12px}
+.led{width:11px;height:11px;border-radius:50%;background:radial-gradient(circle at 36% 32%,#ff8a92,#ff2233 42%,#7d0a13);
+  box-shadow:0 0 14px #ff2233,0 0 30px rgba(255,34,51,.5),inset 0 -1px 2px rgba(0,0,0,.7)}
+.pw b{font:600 8px/1 "Avenir Next Condensed";letter-spacing:.2em;color:var(--mut)}
+
+/* ---- rows ---- */
+.row{display:flex;gap:9px;flex:none}
+.body{padding:9px 12px}
+
+/* ---- knobs ---- */
+.ks{display:flex;align-items:flex-start;gap:12px}
+.k{display:flex;flex-direction:column;align-items:center;gap:5px;--v:.5;--acc:var(--teal)}
+.dial{position:relative;width:var(--d,56px);height:var(--d,56px)}
+.ring,.fill{position:absolute;inset:0;border-radius:50%;
+  -webkit-mask:radial-gradient(circle,transparent 0 calc(50% - 5.5px),#000 calc(50% - 5.5px) calc(50% - 1.5px),transparent calc(50% - 1.5px))}
+.ring{background:conic-gradient(from 225deg,#25252c 0 270deg,transparent 270deg)}
+.fill{background:conic-gradient(from 225deg,var(--acc) calc(var(--v)*270deg),transparent 0 270deg);
+  filter:drop-shadow(0 0 5px color-mix(in srgb,var(--acc) 62%,transparent))}
+.cap{position:absolute;inset:9px;border-radius:50%;
+  background:
+    repeating-conic-gradient(from 0deg,#1d1d22 0deg 7deg,#0b0b0e 7deg 14deg);
+  box-shadow:0 2px 6px rgba(0,0,0,.85),inset 0 0 0 1px rgba(255,255,255,.07)}
+.face{position:absolute;inset:3px;border-radius:50%;
+  background:radial-gradient(circle at 34% 26%,#4a4a52,#18181d 36%,#070709 78%);
+  box-shadow:inset 0 -2px 5px rgba(0,0,0,.9),inset 0 2px 3px rgba(255,255,255,.1)}
+.face::before{content:"";position:absolute;left:14%;top:9%;width:46%;height:30%;border-radius:50%;
+  background:linear-gradient(160deg,rgba(255,255,255,.4),transparent 72%);filter:blur(1.2px)}
+.ptr{position:absolute;left:50%;top:7%;width:2.5px;height:36%;margin-left:-1.25px;border-radius:2px;
+  background:linear-gradient(#fff,#d6d2cc);box-shadow:0 0 6px rgba(255,255,255,.6)}
+.rot{position:absolute;inset:0;transform:rotate(calc(-135deg + var(--v)*270deg))}
+.kl{font:600 9px/1 "Avenir Next Condensed";letter-spacing:.18em;color:var(--mut);white-space:nowrap}
+.kv{font:600 10px/1 "Avenir Next Condensed";letter-spacing:.08em;color:var(--teal2);
+  text-shadow:0 0 8px rgba(21,198,178,.45);white-space:nowrap}
+.hero{--d:84px}
+.hero .cap{inset:11px}
+.hero .kl{font-size:10px;color:#b4b0a9}
+.hero .kv{font-size:14px}
+.sm{--d:50px}
+
+.pan[data-mode="chorus"]  { --mode:var(--chorus);  --mode2:var(--chorus2) }
+.pan[data-mode="vibrato"] { --mode:var(--vibrato); --mode2:var(--vibrato2) }
+.pan[data-mode="phaser"]  { --mode:var(--phaser);  --mode2:var(--phaser2) }
+
+/* ---- segmented ---- */
+.seg{display:flex;border:1px solid #000;border-radius:4px;overflow:hidden;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 1px 3px rgba(0,0,0,.6)}
+.seg b{flex:1;text-align:center;padding:5px 0;font:600 10px/1 "Avenir Next Condensed";letter-spacing:.1em;
+  color:#6f6c66;background:linear-gradient(#131318,#0a0a0d);border-right:1px solid #000;white-space:nowrap}
+.seg b:last-child{border-right:0}
+.seg b.on{color:#02120f;background:linear-gradient(#6ff0df,#15c6b2);
+  text-shadow:0 1px 0 rgba(255,255,255,.35);box-shadow:0 0 13px rgba(21,198,178,.55),inset 0 1px 0 rgba(255,255,255,.5)}
+.seg b.red.on{color:#1a0205;background:linear-gradient(#ff7a85,#ff2233);
+  box-shadow:0 0 13px rgba(255,34,51,.55),inset 0 1px 0 rgba(255,255,255,.45)}
+.seg b.mode.on{color:#06080f;background:linear-gradient(var(--mode2),var(--mode));
+  box-shadow:0 0 13px color-mix(in srgb,var(--mode) 55%,transparent),inset 0 1px 0 rgba(255,255,255,.5)}
+.cap2{font:600 9px/1 "Avenir Next Condensed";letter-spacing:.2em;color:var(--mut);margin-bottom:5px;display:block}
+
+.pan.off .body{opacity:.4}
+.pan.off .hd b{color:#5e5b56;text-shadow:none}
+.pan.off .hd i{background:linear-gradient(90deg,rgba(94,91,86,.3),transparent)}
+.pan.off .hd .seg,.pan.off .hd b.dim{opacity:.4}
+
+/* ---- toggle ---- */
+.tog{display:flex;align-items:center;gap:6px;padding:4px 9px;border:1px solid #000;border-radius:4px;
+  background:linear-gradient(#131318,#0a0a0d);box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+.tog b{font:600 9px/1 "Avenir Next Condensed";letter-spacing:.2em;color:#6f6c66;text-shadow:none}
+.tog u{width:6px;height:6px;border-radius:50%;background:#1e1e24;box-shadow:inset 0 0 2px #000}
+.tog.on b{color:var(--teal2);text-shadow:0 0 8px rgba(21,198,178,.5)}
+.tog.on u{background:var(--teal);box-shadow:0 0 8px var(--teal)}
+
+/* ---- scope ---- */
+.scope{position:relative;border-radius:4px;background:
+  radial-gradient(70% 120% at 50% 50%,#101016,#06060a 75%);
+  border:1px solid #000;box-shadow:inset 0 2px 9px rgba(0,0,0,.9),inset 0 0 0 1px rgba(255,255,255,.035)}
+.scope svg{display:block}
+.scope em{position:absolute;right:6px;top:5px;font:600 8px/1 "Avenir Next Condensed";letter-spacing:.2em;
+  color:#4e4c48;font-style:normal;text-align:right;padding:4px 6px;border-radius:3px;
+  background:rgba(6,6,10,.74)}
+.scope em b{display:block;font:600 10px/1 "Avenir Next Condensed";letter-spacing:.22em;color:var(--mode);
+  text-shadow:0 0 10px color-mix(in srgb,var(--mode) 55%,transparent);margin-bottom:4px}
+.scope em span{display:block;font:600 8px/1 "Avenir Next Condensed";letter-spacing:.12em;color:#55524e}
+
+/* ---- drive meter ---- */
+.drive{display:flex;gap:2px;height:13px;padding:2px;border:1px solid #000;border-radius:3px;
+  background:#0a0a0d;box-shadow:inset 0 1px 4px rgba(0,0,0,.9)}
+.drive u{flex:1;border-radius:1px;background:#1e1e24}
+.drive u.a{background:var(--teal);box-shadow:0 0 5px rgba(21,198,178,.75)}
+.drive u.r{background:var(--saber);box-shadow:0 0 6px rgba(255,34,51,.85)}
+
+/* ---- meter ---- */
+.met{display:flex;gap:4px;align-items:flex-end;height:58px}
+.mcol{width:9px;height:100%;border-radius:2px;background:#0a0a0d;border:1px solid #000;
+  display:flex;flex-direction:column-reverse;padding:2px;gap:2px;box-shadow:inset 0 1px 4px rgba(0,0,0,.9)}
+.mcol u{display:block;height:3px;border-radius:1px;background:#1e1e24}
+.mcol u.a{background:var(--teal);box-shadow:0 0 5px rgba(21,198,178,.8)}
+.mcol u.r{background:var(--saber);box-shadow:0 0 6px rgba(255,34,51,.85)}
+.mlab{font:600 8px/1 "Avenir Next Condensed";letter-spacing:.18em;color:var(--mut);text-align:center;margin-top:5px}
+
+/* ---- footer ---- */
+.foot{flex:none;height:13px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 3px 1px}
+.foot span{font:600 8px/1 "Avenir Next Condensed";letter-spacing:.3em;color:#4e4c48}
+.foot em{font-style:normal;color:var(--teal);opacity:.8}
+</style></head>
+<body>
+<div class="unit">
+
+  <!-- HEADER -->
+  <div class="pan top">
+    <svg class="mark" viewBox="0 0 64 64">
+      <defs>
+        <linearGradient id="hm" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#4a4a54"/><stop offset="38%" stop-color="#1b1b21"/>
+          <stop offset="1" stop-color="#050507"/>
+        </linearGradient>
+        <radialGradient id="core" cx="50%" cy="50%" r="50%">
+          <stop offset="0" stop-color="#eafffb"/><stop offset="35%" stop-color="#63ead9"/>
+          <stop offset="1" stop-color="#0c7367" stop-opacity="0"/>
+        </radialGradient>
+        <linearGradient id="str" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stop-color="#15c6b2" stop-opacity="0"/>
+          <stop offset="1" stop-color="#9ff6e9"/>
+        </linearGradient>
+      </defs>
+      <!-- chassis disc -->
+      <circle cx="32" cy="32" r="28" fill="url(#hm)" stroke="#15c6b2" stroke-width="1.1" stroke-opacity=".45"/>
+      <circle cx="32" cy="32" r="22" fill="none" stroke="#000" stroke-width="1.6"/>
+      <circle cx="32" cy="32" r="22" fill="none" stroke="#5b5b66" stroke-width=".7" stroke-opacity=".6"/>
+      <!-- jump streaks converging on the core -->
+      <g stroke="url(#str)" stroke-width="1.5" stroke-linecap="round" fill="none">
+        <path d="M32 32 L32 8"/><path d="M32 32 L52 15"/><path d="M32 32 L56 32"/>
+        <path d="M32 32 L52 49"/><path d="M32 32 L32 56"/><path d="M32 32 L12 49"/>
+        <path d="M32 32 L8 32"/><path d="M32 32 L12 15"/>
+      </g>
+      <g stroke="url(#str)" stroke-width=".9" stroke-opacity=".6" stroke-linecap="round" fill="none">
+        <path d="M32 32 L44 11"/><path d="M32 32 L55 22"/><path d="M32 32 L55 43"/>
+        <path d="M32 32 L44 54"/><path d="M32 32 L20 54"/><path d="M32 32 L9 43"/>
+        <path d="M32 32 L9 22"/><path d="M32 32 L20 11"/>
+      </g>
+      <circle cx="32" cy="32" r="13" fill="url(#core)"/>
+      <circle cx="32" cy="32" r="3.4" fill="#f2fffc"/>
+    </svg>
+    <div class="name"><h1>HYPERSPACE</h1><p>MODULATED REVERB</p></div>
+    <div class="spacer"></div>
+    <div class="preset"><span>&#9666;</span><em>INFINITE CORRIDOR</em><span>&#9656;</span></div>
+    <div class="picons">
+      <i title="New">
+        <svg viewBox="0 0 16 16"><path d="M8 3.2v9.6M3.2 8h9.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </i>
+      <i title="Save">
+        <svg viewBox="0 0 16 16"><path d="M3 3h8.5L13 4.5V13H3z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M5.6 3v3.4h4.8V3" fill="none" stroke="currentColor" stroke-width="1.3"/><rect x="5.2" y="9" width="5.6" height="4" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
+      </i>
+      <i title="Delete">
+        <svg viewBox="0 0 16 16"><path d="M3.4 4.6h9.2M6.4 4.6V3.2h3.2v1.4M4.6 4.6l.7 8.2h5.4l.7-8.2" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 7v3.6M9 7v3.6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+      </i>
+    </div>
+    <div class="pw"><div class="led"></div><b>POWER</b></div>
+  </div>
+
+  <!-- ROW A -->
+  <div class="row" style="height:186px">
+
+    <div class="pan" style="width:500px">
+      <div class="hd"><b>REVERB ENGINE</b><i></i>
+        <div class="seg" style="width:252px"><b>ROOM</b><b class="on">HALL</b><b>PLATE</b><b>SPRING</b><b>AMB</b></div>
+      </div>
+      <div class="body" style="display:flex;gap:14px;align-items:center;padding:9px 12px">
+        <div class="k hero" style="--v:.52">
+          <div class="dial"><div class="ring"></div><div class="fill"></div>
+            <div class="cap"><div class="face"></div><div class="rot"><div class="ptr"></div></div></div></div>
+          <div class="kl">DECAY</div><div class="kv">4.80 s</div>
+        </div>
+        <div style="flex:1">
+          <div class="ks" style="justify-content:space-between;margin-bottom:10px">
+            <div class="k" style="--v:.66"><div class="dial"><div class="ring"></div><div class="fill"></div>
+              <div class="cap"><div class="face"></div><div class="rot"><div class="ptr"></div></div></div></div>
+              <div class="kl">SIZE</div><div class="kv">66 %</div></div>
+            <div class="k" style="--v:.3"><div class="dial"><div class="ring"></div><div class="fill"></div>
+              <div class="cap"><div class="face"></div><div class="rot"><div class="ptr"></div></div></div></div>
+              <div class="kl">PRE-DLY</div><div class="kv">75 ms</div></div>
+            <div class="k" style="--v:.74"><div class="dial"><div class="ring"></div><div class="fill"></div>
+              <div class="cap"><div class="face"></div><div class="rot"><div class="ptr"></div></div></div></div>
+              <div class="kl">DIFFUSE</div><div class="kv">74 %</div></div>
+            <div class="k" style="--v:.62"><div class="dial"><div class="ring"></div><div class="fill"></div>
+              <div class="cap"><div class="face"></div><div class="rot"><div class="ptr"></div></div></div></div>
+              <div class="kl">EARLY/LATE</div><div class="kv">62 %</div></div>
+          </div>
+          <span class="cap2">PRE-DELAY SYNC</span>
+          <div class="seg"><b class="on">MS</b><b>1/16</b><b>1/8</b><b>1/4</b></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pan" style="flex:1">
+      <div class="hd"><b>TONE &amp; DAMPING</b><i></i><s></s></div>
+      <div class="body" style="display:flex;gap:14px;align-items:center;padding:9px 12px">
+        <div class="ks" style="gap:11px">
+          <div class="k" style="--v:.18"><div class="dial"><div class="ring"></div><div class="fill"></div>
+            <div class="cap"><div class="face"></div><div class="rot"><div class="ptr"></div></div></div></div>
+            <div class="kl">LOW CUT</div><div class="kv">90 Hz</div></div>
+          <div class="k" style="--v:.72"><div class="dial"><div class="ring"></div><div class="fill"></div>
+            <div class="cap"><div class="face"></div><div class="rot"><div class="ptr"></div></div></div></div>
+            <div class="kl">HIGH CUT</div><div class="kv">7.4 kHz</div></div>
+          <div class="k" style="--v:.6"><div class="dial"><div class="ring"></div><div class="fill"></div>
+            <div class="cap"><div class="face"></div><div class="rot"><div class="ptr"></div></div></div></div>
+            <div class="kl">DAMP</div><div class="kv">60 %</div></div>
+          <div class="k" style="--v:.44"><div class="dial"><div class="ring"></div><div class="fill"></div>
+            <div class="cap"><div class="face"></div><div class="rot"><div class="ptr"></div></div></div></div>
+            <div class="kl">TONE</div><div class="kv">-1.2 dB</div></div>
+        </div>
+        <div class="scope" style="flex:1;height:120px"><em>RESPONSE</em>
+          <svg id="eq" width="100%" height="100%" preserveAspectRatio="none"></svg></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROW B -->
+  <div class="row" style="height:186px">
+
+    <div class="pan" data-enable data-mode="chorus" id="modPanel" style="flex:1">
+      <div class="hd"><b>MODULATION</b><i></i>
+        <div class="tog on"><u></u><b>ON</b></div>
+        <b class="dim">MODE</b>
+        <div class="seg" id="modeSeg" style="width:228px"><b class="mode on">CHORUS</b><b class="mode">VIBRATO</b><b class="mode">PHASER</b></div>
+      </div>
+      <div class="body" style="display:flex;gap:14px;align-items:center;padding:9px 12px">
+        <div style="width:382px">
+          <div class="ks" style="justify-content:space-between;margin-bottom:10px">
+            <div class="k" style="--v:.36"><div class="dial"><div class="ring"></div><div class="fill"></div>
+              <div class="cap"><div class="face"></div><div class="rot"><div class="ptr"></div></div></div></div>
+              <div class="kl">RATE</div><div class="kv">0.62 Hz</div></div>
+            <div class="k" style="--v:.58"><div class="dial"><div class="ring"></div><div class="fill"></div>
+              <div class="cap"><div class="face"></div><div class="rot"><div class="ptr"></div></div></div></div>
+              <div class="kl">DEPTH</div><div class="kv">58 %</div></div>
+            <div class="k" style="--v:.8;--acc:var(--mode)"><div class="dial"><div class="ring"></div><div class="fill"></div>
+              <div class="cap"><div class="face"></div><div class="rot"><div class="ptr"></div></div></div></div>
+              <div class="kl">SPREAD</div><div class="kv">80 %</div></div>
+            <div class="k" id="modMixKnob" style="--v:.5"><div class="dial"><div class="ring"></div><div class="fill"></div>
+              <div class="cap"><div class="face"></div><div class="rot"><div class="ptr"></div></div></div></div>
+              <div class="kl">MOD MIX</div><div class="kv">50 %</div></div>
+          </div>
+          <div style="display:flex;gap:10px">
+            <div style="flex:1.05"><span class="cap2">SHAPE</span>
+              <div class="seg"><b class="on">SINE</b><b>TRI</b><b>RND</b></div></div>
+            <div style="flex:1.25"><span class="cap2">TARGET</span>
+              <div class="seg"><b class="on">DELAY</b><b>FILTER</b><b>BOTH</b></div></div>
+            <div style="flex:1.35"><span class="cap2">RATE SYNC</span>
+              <div class="seg"><b class="on">FREE</b><b>1/2</b><b>1/4</b><b>1/8</b></div></div>
+          </div>
+        </div>
+        <div class="scope" style="flex:1;height:126px"><em id="modTag"><b>CHORUS</b><span>DRY + DETUNED TAIL</span></em>
+          <svg id="mod" width="100%" height="100%" preserveAspectRatio="none"></svg></div>
+      </div>
+    </div>
+
+    <div class="pan" data-enable style="width:268px">
+      <div class="hd"><b>PRE AMP</b><i></i><div class="tog on"><u></u><b>ON</b></div></div>
+      <div class="body" style="padding:9px 12px">
+        <div class="ks" style="justify-content:space-between;margin-bottom:10px">
+          <div class="k" style="--v:.58"><div class="dial"><div class="ring"></div><div class="fill"></div>
+            <div class="cap"><div class="face"></div><div class="rot"><div class="ptr"></div></div></div></div>
+            <div class="kl">GAIN</div><div class="kv">+6.0 dB</div></div>
+          <div class="k" style="--v:.62"><div class="dial"><div class="ring"></div><div class="fill"></div>
+            <div class="cap"><div class="face"></div><div class="rot"><div class="ptr"></div></div></div></div>
+            <div class="kl">TONE</div><div class="kv">+2.0 dB</div></div>
+          <div class="k" style="--v:.46"><div class="dial"><div class="ring"></div><div class="fill"></div>
+            <div class="cap"><div class="face"></div><div class="rot"><div class="ptr"></div></div></div></div>
+            <div class="kl">OUTPUT</div><div class="kv">-2.0 dB</div></div>
+        </div>
+        <span class="cap2">DRIVE</span>
+        <div class="drive" id="drive"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROW C -->
+  <div class="row" style="flex:1">
+
+    <div class="pan" style="flex:1;display:flex;flex-direction:column">
+      <div class="hd"><b>REVERB TAIL</b><i></i>
+        <div class="tog"><u></u><b>FREEZE</b></div>
+        <div class="tog on"><u></u><b>DUCK</b></div>
+      </div>
+      <div class="body" style="flex:1;display:flex;gap:12px;align-items:center;padding:8px 12px">
+        <div class="k sm" style="--v:.4;--acc:var(--saber)"><div class="dial"><div class="ring"></div><div class="fill"></div>
+          <div class="cap"><div class="face"></div><div class="rot"><div class="ptr"></div></div></div></div>
+          <div class="kl">DUCK</div><div class="kv">-4.5 dB</div></div>
+        <div class="scope" style="flex:1;height:84px"><em>PRE-DELAY &middot; EARLY &middot; TAIL</em>
+          <svg id="tail" width="100%" height="100%" preserveAspectRatio="none"></svg></div>
+      </div>
+    </div>
+
+    <div class="pan" style="width:330px">
+      <div class="hd"><b>OUTPUT</b><i></i><s></s></div>
+      <div class="body" style="display:flex;gap:12px;align-items:center;padding:6px 14px">
+        <div class="k sm" style="--v:.38"><div class="dial"><div class="ring"></div><div class="fill"></div>
+          <div class="cap"><div class="face"></div><div class="rot"><div class="ptr"></div></div></div></div>
+          <div class="kl">MIX</div><div class="kv">38 %</div></div>
+        <div class="k sm" style="--v:.7"><div class="dial"><div class="ring"></div><div class="fill"></div>
+          <div class="cap"><div class="face"></div><div class="rot"><div class="ptr"></div></div></div></div>
+          <div class="kl">WIDTH</div><div class="kv">120 %</div></div>
+        <div class="k sm" style="--v:.6"><div class="dial"><div class="ring"></div><div class="fill"></div>
+          <div class="cap"><div class="face"></div><div class="rot"><div class="ptr"></div></div></div></div>
+          <div class="kl">LEVEL</div><div class="kv">-1.5 dB</div></div>
+        <div style="margin-left:4px">
+          <div class="met" id="met"></div>
+          <div class="mlab">L &nbsp; R</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot"><span>ROZAN AUDIO</span><span>VST3 &middot; STANDALONE &nbsp;&nbsp; <em>v0.1.0</em></span></div>
+</div>
+
+<script>
+/* ?off renders the same panel with MODULATION and PRE AMP switched off */
+if (location.search.indexOf('off') >= 0)
+  document.querySelectorAll('[data-enable]').forEach(function (p) {
+    p.classList.add('off');
+    p.querySelector('.hd .tog').classList.remove('on');
+  });
+
+const ns = 'http://www.w3.org/2000/svg';
+function el(n, a){ const e = document.createElementNS(ns, n); for (const k in a) e.setAttribute(k, a[k]); return e; }
+function svg(id){ const s = document.getElementById(id);
+  s.setAttribute('viewBox', '0 0 ' + s.clientWidth + ' ' + s.clientHeight);
+  return [s, s.clientWidth, s.clientHeight]; }
+const TEAL = '#15c6b2', TEAL2 = '#9ff6e9', RED = '#ff2233';
+
+function glow(s, d, col, w){
+  s.appendChild(el('path', {d: d, fill: 'none', stroke: col, 'stroke-width': w * 4,
+                            'stroke-opacity': .18, filter: 'blur(4px)'}));
+  s.appendChild(el('path', {d: d, fill: 'none', stroke: col, 'stroke-width': w,
+                            'stroke-linecap': 'round'}));
+}
+
+/* ---- tone response: low cut + high cut + tilt ---- */
+(function(){
+  const [s, W, H] = svg('eq');
+  for (let i = 1; i < 5; i++)
+    s.appendChild(el('line', {x1: W*i/5, y1: 0, x2: W*i/5, y2: H, stroke: '#fff', 'stroke-opacity': .04}));
+  s.appendChild(el('line', {x1: 0, y1: H*.42, x2: W, y2: H*.42, stroke: TEAL,
+                            'stroke-opacity': .2, 'stroke-dasharray': '3 4'}));
+  let d = '';
+  for (let x = 0; x <= W; x += 2) {
+    const f = x / W;                                  // 0 = 20 Hz, 1 = 20 kHz (log)
+    const hp = 1 / (1 + Math.pow(0.14 / Math.max(f, .001), 4));   // low cut at 90 Hz
+    const lp = 1 / (1 + Math.pow(Math.max(f, .001) / 0.74, 4));   // high cut at 7.4 kHz
+    const tilt = -0.12 * (f - .5);                                // tone, slightly dark
+    const g = hp * lp * (1 + tilt);
+    const y = H * .42 - (g - .55) * H * .5;
+    d += (x ? 'L' : 'M') + x + ' ' + y.toFixed(1);
+  }
+  s.appendChild(el('path', {d: d + 'L' + W + ' ' + H + 'L0 ' + H + 'Z', fill: TEAL, 'fill-opacity': .07}));
+  glow(s, d, TEAL, 1.9);
+  s.appendChild(el('path', {d: d, fill: 'none', stroke: TEAL2, 'stroke-width': .8, 'stroke-opacity': .8}));
+})();
+
+/* ---- modulation: each mode gets its own colour and its own signature ---- */
+const MODES = {
+  chorus:  { dry: true,  fill: false, notches: false, note: 'DRY + DETUNED TAIL' },
+  vibrato: { dry: false, fill: true,  notches: false, note: 'MODULATED TAIL ONLY' },
+  phaser:  { dry: true,  fill: false, notches: true,  note: 'DRY + SWEPT NOTCHES' }
+};
+
+const modeNames = Object.keys(MODES);
+const requested = (new URLSearchParams(location.search).get('mode') || 'chorus').toLowerCase();
+const modeName = MODES[requested] ? requested : 'chorus';
+const mode = MODES[modeName];
+
+// the panel attribute drives every mode-coloured rule in the stylesheet
+document.getElementById('modPanel').setAttribute('data-mode', modeName);
+document.querySelectorAll('#modeSeg b').forEach(function (b, i) {
+  b.classList.toggle('on', i === modeNames.indexOf(modeName));
+});
+document.querySelector('#modTag b').textContent = modeName.toUpperCase();
+document.querySelector('#modTag span').textContent = mode.note;
+
+// Vibrato is the modulated path alone, so MOD MIX is pinned at 100 % and greys out,
+// the same way a knob does when the host tempo takes it over.
+const modMixKnob = document.getElementById('modMixKnob');
+
+if (modeName === 'vibrato') {
+  modMixKnob.style.setProperty('--v', 1);
+  modMixKnob.querySelector('.kv').textContent = '100 %';
+  modMixKnob.style.opacity = .45;
+}
+
+(function(){
+  const [s, W, H] = svg('mod');
+  const css = getComputedStyle(document.getElementById('modPanel'));
+  const colour = css.getPropertyValue('--mode').trim();
+  const light  = css.getPropertyValue('--mode2').trim();
+  const mid = H / 2;
+
+  for (let i = 1; i < 4; i++)
+    s.appendChild(el('line', {x1: W*i/4, y1: 0, x2: W*i/4, y2: H, stroke: '#fff', 'stroke-opacity': .04}));
+
+  function curve(shift, amount) {
+    let d = '';
+    for (let x = 0; x <= W; x += 1.5) {
+      const t = x / W;
+      const y = mid - Math.sin(2 * Math.PI * (t * 2 + shift)) * H * .30 * (amount === undefined ? 1 : amount);
+      d += (x ? 'L' : 'M') + x + ' ' + y.toFixed(1);
+    }
+    return d;
+  }
+
+  const spread = 0.8 * 0.5;        // the SPREAD knob, in cycles
+
+  // Vibrato has no dry path at all, so the band between the tail and its resting
+  // pitch is the whole signal; the other two modes beat the modulated path against
+  // a dry one, and that dry path is drawn as the line it is.
+  if (mode.fill) {
+    const area = curve(0) + 'L' + W + ' ' + mid + 'L0 ' + mid + 'Z';
+    s.appendChild(el('path', {d: area, fill: colour, 'fill-opacity': .14}));
+  }
+
+  if (mode.dry) {
+    s.appendChild(el('line', {x1: 0, y1: mid, x2: W, y2: mid, stroke: '#d8d4cd', 'stroke-opacity': .45,
+                              'stroke-width': 1.2}));
+    s.appendChild(el('rect', {x: 5, y: mid - 15, width: 27, height: 12, rx: 2,
+                              fill: '#06060a', 'fill-opacity': .74}));
+    const tag = el('text', {x: 9, y: mid - 6, fill: '#d8d4cd', 'fill-opacity': .6,
+                            'font-family': 'Avenir Next Condensed', 'font-size': 8,
+                            'font-weight': 600, 'letter-spacing': 1.4});
+    tag.textContent = 'DRY';
+    s.appendChild(tag);
+  } else {
+    s.appendChild(el('line', {x1: 0, y1: mid, x2: W, y2: mid, stroke: colour,
+                              'stroke-opacity': .25, 'stroke-dasharray': '3 4'}));
+  }
+
+  // Phaser sweeps notches rather than delay time: ticks hang off the trace to show
+  // where in the spectrum they currently sit.
+  if (mode.notches) {
+    for (let x = 10; x <= W; x += 24) {
+      const t = x / W;
+      const y = mid - Math.sin(2 * Math.PI * (t * 2)) * H * .30;
+      s.appendChild(el('line', {x1: x, y1: y - 7, x2: x, y2: y + 7, stroke: light,
+                                'stroke-opacity': .5, 'stroke-width': 1.3}));
+    }
+  }
+
+  [[colour, 0], [light, spread]].forEach(function (pair) {
+    const d = curve(pair[1]);
+    s.appendChild(el('path', {d: d, fill: 'none', stroke: pair[0], 'stroke-width': 8,
+                              'stroke-opacity': .16, filter: 'blur(4px)'}));
+    s.appendChild(el('path', {d: d, fill: 'none', stroke: pair[0], 'stroke-width': 2.1,
+                              'stroke-linecap': 'round'}));
+  });
+
+  const px = W * .42;
+  s.appendChild(el('line', {x1: px, y1: 0, x2: px, y2: H, stroke: light, 'stroke-opacity': .5}));
+  s.appendChild(el('circle', {cx: px, cy: mid - Math.sin(2*Math.PI*(.42*2)) * H*.33, r: 3.2, fill: '#fff'}));
+})();
+
+/* ---- impulse response: pre-delay gap, early reflections, modulated tail ---- */
+(function(){
+  const [s, W, H] = svg('tail');
+  const mid = H * .52;
+  s.appendChild(el('line', {x1: 0, y1: mid, x2: W, y2: mid, stroke: '#fff', 'stroke-opacity': .07}));
+  const pre = W * .09, early = pre + W * .13;
+  s.appendChild(el('rect', {x: 0, y: 0, width: pre, height: H, fill: '#fff', 'fill-opacity': .025}));
+  s.appendChild(el('line', {x1: pre, y1: 0, x2: pre, y2: H, stroke: TEAL,
+                            'stroke-opacity': .35, 'stroke-dasharray': '2 3'}));
+
+  // early reflections: discrete taps
+  const taps = [[.00, .92], [.17, .74], [.31, .83], [.46, .6], [.58, .68], [.72, .5], [.86, .57]];
+  taps.forEach(function (t) {
+    const x = pre + (early - pre) * t[0], a = t[1] * mid * .82;
+    s.appendChild(el('line', {x1: x, y1: mid - a, x2: x, y2: mid + a * .8,
+                              stroke: TEAL2, 'stroke-width': 1.6, 'stroke-opacity': .9}));
+  });
+
+  // late tail: exponential decay with the mod ripple riding on it
+  let rnd = 7;
+  function nrand(){ rnd = (rnd * 1103515245 + 12345) & 0x7fffffff; return (rnd / 0x7fffffff) * 2 - 1; }
+  let up = 'M' + early + ' ' + mid, dn = '';
+  const pts = [];
+  for (let x = early; x <= W; x += 3) {
+    const t = (x - early) / (W - early);
+    const env = Math.exp(-t * 2.7);
+    const ripple = 1 + 0.26 * Math.sin(t * 15.5);          // modulated tail
+    pts.push([x, env * ripple * mid * .7]);
+  }
+  pts.forEach(function (p, i) { up += 'L' + p[0] + ' ' + (mid - p[1]).toFixed(1); });
+  for (let i = pts.length - 1; i >= 0; i--) dn += 'L' + pts[i][0] + ' ' + (mid + pts[i][1] * .8).toFixed(1);
+  s.appendChild(el('path', {d: up + dn + 'Z', fill: TEAL, 'fill-opacity': .14}));
+  s.appendChild(el('path', {d: up, fill: 'none', stroke: TEAL, 'stroke-width': 1.5, 'stroke-opacity': .85}));
+  s.appendChild(el('path', {d: 'M' + early + ' ' + mid + dn, fill: 'none', stroke: TEAL,
+                            'stroke-width': 1.5, 'stroke-opacity': .85}));
+  // noise fill inside the envelope
+  for (let x = early; x <= W; x += 2.6) {
+    const t = (x - early) / (W - early);
+    const a = Math.exp(-t * 2.7) * (1 + 0.26 * Math.sin(t * 15.5)) * mid * .7;
+    const h = a * (0.35 + 0.65 * Math.abs(nrand()));
+    s.appendChild(el('line', {x1: x, y1: mid - h, x2: x, y2: mid + h * .8,
+                              stroke: TEAL2, 'stroke-width': .9, 'stroke-opacity': .45}));
+  }
+})();
+
+/* ---- pre amp drive ---- */
+const drive = document.getElementById('drive');
+
+for (let i = 0; i < 18; i++) {
+  const u = document.createElement('u');
+  if (i < 12) u.className = i > 14 ? 'r' : 'a';
+  drive.appendChild(u);
+}
+
+/* ---- meters ---- */
+const met = document.getElementById('met');
+[11, 9].forEach(function (lit) {
+  const c = document.createElement('div'); c.className = 'mcol';
+  for (let i = 0; i < 14; i++) {
+    const u = document.createElement('u');
+    if (i < lit) u.className = i > 10 ? 'r' : 'a';
+    c.appendChild(u);
+  }
+  met.appendChild(c);
+});
+</script>
+</body></html>
