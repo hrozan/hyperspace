@@ -15,4 +15,4 @@ struct Preset
 const std::vector<Preset>& factory();
 
 void apply (juce::AudioProcessorValueTreeState&, int index);
-}
+} // namespace Presets

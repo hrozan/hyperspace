@@ -3,7 +3,9 @@
 #include "Theme.h"
 
 IconButton::IconButton (Icon i, const juce::String& tooltip, juce::Colour accent)
-    : juce::Button (tooltip), icon (i), accentColour (accent)
+    : juce::Button (tooltip)
+    , icon (i)
+    , accentColour (accent)
 {
     setTooltip (tooltip);
     setMouseCursor (juce::MouseCursor::PointingHandCursor);
@@ -25,7 +27,7 @@ void IconButton::paintButton (juce::Graphics& g, bool highlighted, bool down)
 
     auto colour = accentColour;
 
-    if (! isEnabled())
+    if (!isEnabled())
         colour = colour.withAlpha (0.25f);
     else if (highlighted)
         colour = colour.brighter (0.4f);
@@ -41,34 +43,42 @@ void IconButton::paintButton (juce::Graphics& g, bool highlighted, bool down)
 
     switch (icon)
     {
-        case Icon::plus:
-            p.startNewSubPath (8.0f, 2.6f);  p.lineTo (8.0f, 13.4f);
-            p.startNewSubPath (2.6f, 8.0f);  p.lineTo (13.4f, 8.0f);
-            break;
+    case Icon::plus:
+        p.startNewSubPath (8.0f, 2.6f);
+        p.lineTo (8.0f, 13.4f);
+        p.startNewSubPath (2.6f, 8.0f);
+        p.lineTo (13.4f, 8.0f);
+        break;
 
-        case Icon::save:
-            p.startNewSubPath (2.6f, 2.6f);
-            p.lineTo (11.6f, 2.6f);
-            p.lineTo (13.4f, 4.4f);
-            p.lineTo (13.4f, 13.4f);
-            p.lineTo (2.6f, 13.4f);
-            p.closeSubPath();
-            p.addRectangle (5.3f, 2.6f, 5.4f, 3.6f);
-            p.addRectangle (4.9f, 9.0f, 6.2f, 4.4f);
-            break;
+    case Icon::save:
+        p.startNewSubPath (2.6f, 2.6f);
+        p.lineTo (11.6f, 2.6f);
+        p.lineTo (13.4f, 4.4f);
+        p.lineTo (13.4f, 13.4f);
+        p.lineTo (2.6f, 13.4f);
+        p.closeSubPath();
+        p.addRectangle (5.3f, 2.6f, 5.4f, 3.6f);
+        p.addRectangle (4.9f, 9.0f, 6.2f, 4.4f);
+        break;
 
-        case Icon::trash:
-            p.startNewSubPath (3.0f, 4.4f);  p.lineTo (13.0f, 4.4f);
-            p.startNewSubPath (6.2f, 4.4f);  p.lineTo (6.2f, 2.9f);
-            p.lineTo (9.8f, 2.9f);           p.lineTo (9.8f, 4.4f);
-            p.startNewSubPath (4.3f, 4.4f);  p.lineTo (5.1f, 13.2f);
-            p.lineTo (10.9f, 13.2f);         p.lineTo (11.7f, 4.4f);
-            p.startNewSubPath (7.0f, 6.8f);  p.lineTo (7.0f, 10.9f);
-            p.startNewSubPath (9.0f, 6.8f);  p.lineTo (9.0f, 10.9f);
-            break;
+    case Icon::trash:
+        p.startNewSubPath (3.0f, 4.4f);
+        p.lineTo (13.0f, 4.4f);
+        p.startNewSubPath (6.2f, 4.4f);
+        p.lineTo (6.2f, 2.9f);
+        p.lineTo (9.8f, 2.9f);
+        p.lineTo (9.8f, 4.4f);
+        p.startNewSubPath (4.3f, 4.4f);
+        p.lineTo (5.1f, 13.2f);
+        p.lineTo (10.9f, 13.2f);
+        p.lineTo (11.7f, 4.4f);
+        p.startNewSubPath (7.0f, 6.8f);
+        p.lineTo (7.0f, 10.9f);
+        p.startNewSubPath (9.0f, 6.8f);
+        p.lineTo (9.0f, 10.9f);
+        break;
     }
 
     p.applyTransform (transform);
-    g.strokePath (p, juce::PathStrokeType (1.45f * scale, juce::PathStrokeType::curved,
-                                           juce::PathStrokeType::rounded));
+    g.strokePath (p, juce::PathStrokeType (1.45f * scale, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
 }

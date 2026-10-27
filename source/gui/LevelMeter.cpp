@@ -6,9 +6,7 @@
 
 LevelMeter::LevelMeter (std::function<float (int)> source)
     : getPeak (std::move (source))
-{
-    startTimerHz (30);
-}
+{ startTimerHz (30); }
 
 void LevelMeter::timerCallback()
 {
@@ -50,17 +48,16 @@ void LevelMeter::paint (juce::Graphics& g)
         g.drawRoundedRectangle (column.reduced (0.5f), 2.0f, 1.0f);
 
         const auto db = juce::Decibels::gainToDecibels (displayed[static_cast<size_t> (c)], -60.0f);
-        const auto lit = juce::roundToInt (juce::jmap (juce::jlimit (-48.0f, 6.0f, db),
-                                                       -48.0f, 6.0f, 0.0f, static_cast<float> (segments)));
+        const auto lit = juce::roundToInt (
+            juce::jmap (juce::jlimit (-48.0f, 6.0f, db), -48.0f, 6.0f, 0.0f, static_cast<float> (segments)));
 
         const auto inner = column.reduced (2.0f);
         const auto cell = inner.getHeight() / static_cast<float> (segments);
 
         for (int s = 0; s < segments; ++s)
         {
-            const auto seg = juce::Rectangle<float> (inner.getX(),
-                                                     inner.getBottom() - static_cast<float> (s + 1) * cell,
-                                                     inner.getWidth(), cell - 2.0f);
+            const auto seg = juce::Rectangle<float> (
+                inner.getX(), inner.getBottom() - static_cast<float> (s + 1) * cell, inner.getWidth(), cell - 2.0f);
 
             if (s < lit)
             {

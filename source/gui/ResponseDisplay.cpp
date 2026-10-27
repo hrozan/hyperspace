@@ -16,9 +16,10 @@ float valueOf (juce::AudioProcessorValueTreeState& state, const char* id, float 
 
     return fallback;
 }
-}
+} // namespace
 
-ResponseDisplay::ResponseDisplay (juce::AudioProcessorValueTreeState& s) : state (s)
+ResponseDisplay::ResponseDisplay (juce::AudioProcessorValueTreeState& s)
+    : state (s)
 {
     setInterceptsMouseClicks (false, false);
     startTimerHz (15);
@@ -26,15 +27,14 @@ ResponseDisplay::ResponseDisplay (juce::AudioProcessorValueTreeState& s) : state
 
 void ResponseDisplay::timerCallback()
 {
-    const auto newLow  = valueOf (state, ParamID::lowCut, lowCut);
+    const auto newLow = valueOf (state, ParamID::lowCut, lowCut);
     const auto newHigh = valueOf (state, ParamID::highCut, highCut);
     const auto newDamp = valueOf (state, ParamID::damping, damping * 100.0f) * 0.01f;
     const auto newTone = valueOf (state, ParamID::tone, tone);
 
     const auto changed = [] (float a, float b) { return std::abs (a - b) > 1.0e-4f; };
 
-    if (changed (newLow, lowCut) || changed (newHigh, highCut)
-        || changed (newDamp, damping) || changed (newTone, tone))
+    if (changed (newLow, lowCut) || changed (newHigh, highCut) || changed (newDamp, damping) || changed (newTone, tone))
     {
         lowCut = newLow;
         highCut = newHigh;
@@ -46,8 +46,14 @@ void ResponseDisplay::timerCallback()
 
 float ResponseDisplay::magnitudeDb (float f) const
 {
-    const auto onePoleHp = [f] (float fc) { const auto r = f / fc; return r / std::sqrt (1.0f + r * r); };
-    const auto onePoleLp = [f] (float fc) { const auto r = f / fc; return 1.0f / std::sqrt (1.0f + r * r); };
+    const auto onePoleHp = [f] (float fc) {
+        const auto r = f / fc;
+        return r / std::sqrt (1.0f + r * r);
+    };
+    const auto onePoleLp = [f] (float fc) {
+        const auto r = f / fc;
+        return 1.0f / std::sqrt (1.0f + r * r);
+    };
 
     // The damping filter sits inside the tank, so it shapes the tail on top of the cuts.
     const auto dampCutoff = ReverbEngine::dampingCutoffHz (damping);
@@ -56,8 +62,8 @@ float ResponseDisplay::magnitudeDb (float f) const
 
     // Tone is a tilt around 700 Hz: the two halves move in opposite directions.
     const auto split = (f * f) / (f * f + 700.0f * 700.0f);
-    const auto tilt = juce::Decibels::decibelsToGain (-tone) * (1.0f - split)
-                        + juce::Decibels::decibelsToGain (tone) * split;
+    const auto tilt =
+        juce::Decibels::decibelsToGain (-tone) * (1.0f - split) + juce::Decibels::decibelsToGain (tone) * split;
 
     return juce::Decibels::gainToDecibels (gain * tilt, -60.0f);
 }
@@ -66,16 +72,16 @@ void ResponseDisplay::paint (juce::Graphics& g)
 {
     const auto bounds = getLocalBounds().toFloat();
 
-    g.setGradientFill (juce::ColourGradient (juce::Colour (0xff101016), bounds.getCentre(),
-                                             juce::Colour (0xff06060a), bounds.getBottomLeft(), true));
+    g.setGradientFill (juce::ColourGradient (juce::Colour (0xff101016), bounds.getCentre(), juce::Colour (0xff06060a),
+                                             bounds.getBottomLeft(), true));
     g.fillRoundedRectangle (bounds, 4.0f);
 
     const auto r = bounds.reduced (2.0f);
 
     g.setColour (juce::Colours::white.withAlpha (0.04f));
     for (int i = 1; i < 5; ++i)
-        g.drawVerticalLine (static_cast<int> (r.getX() + r.getWidth() * static_cast<float> (i) / 5.0f),
-                            r.getY(), r.getBottom());
+        g.drawVerticalLine (static_cast<int> (r.getX() + r.getWidth() * static_cast<float> (i) / 5.0f), r.getY(),
+                            r.getBottom());
 
     const auto unityY = r.getY() + r.getHeight() * (topDb / (topDb - bottomDb));
 
@@ -112,8 +118,7 @@ void ResponseDisplay::paint (juce::Graphics& g)
     g.setColour (Theme::teal.withAlpha (0.18f));
     g.strokePath (curve, juce::PathStrokeType (7.0f, juce::PathStrokeType::curved));
     g.setColour (Theme::teal);
-    g.strokePath (curve, juce::PathStrokeType (1.9f, juce::PathStrokeType::curved,
-                                               juce::PathStrokeType::rounded));
+    g.strokePath (curve, juce::PathStrokeType (1.9f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
     g.setColour (Theme::tealBright.withAlpha (0.8f));
     g.strokePath (curve, juce::PathStrokeType (0.8f, juce::PathStrokeType::curved));
 

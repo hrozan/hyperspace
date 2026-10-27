@@ -9,7 +9,7 @@ class HyperspaceEditor final : public juce::AudioProcessorEditor
 {
 public:
     /** Logical panel size; the editor scales this to fit whatever the host gives it. */
-    static constexpr int designWidth  = 1040;
+    static constexpr int designWidth = 1040;
     static constexpr int designHeight = 650;
 
     explicit HyperspaceEditor (HyperspaceProcessor&);

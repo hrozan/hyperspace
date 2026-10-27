@@ -16,7 +16,7 @@ public:
     {
         juce::String name;
         bool isFactory = true;
-        juce::File file;   // user presets only
+        juce::File file; // user presets only
     };
 
     explicit PresetManager (juce::AudioProcessorValueTreeState&);
@@ -42,7 +42,11 @@ public:
     std::function<void()> onChange;
 
 private:
-    void notify() const { if (onChange != nullptr) onChange(); }
+    void notify() const
+    {
+        if (onChange != nullptr)
+            onChange();
+    }
 
     juce::AudioProcessorValueTreeState& state;
     std::vector<Entry> entries;

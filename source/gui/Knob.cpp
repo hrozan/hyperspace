@@ -5,13 +5,14 @@
 namespace
 {
 constexpr float rotaryStart = juce::MathConstants<float>::pi * 1.25f;
-constexpr float rotaryEnd   = juce::MathConstants<float>::pi * 2.75f;
-}
+constexpr float rotaryEnd = juce::MathConstants<float>::pi * 2.75f;
+} // namespace
 
-Knob::Knob (juce::RangedAudioParameter& parameter, const juce::String& caption,
-            juce::Colour accent, bool hero)
-    : param (parameter), captionText (caption), isHero (hero),
-      attachment (parameter, slider, nullptr)
+Knob::Knob (juce::RangedAudioParameter& parameter, const juce::String& caption, juce::Colour accent, bool hero)
+    : param (parameter)
+    , captionText (caption)
+    , isHero (hero)
+    , attachment (parameter, slider, nullptr)
 {
     slider.setSliderStyle (juce::Slider::RotaryVerticalDrag);
     slider.setTextBoxStyle (juce::Slider::NoTextBox, false, 0, 0);
@@ -21,7 +22,10 @@ Knob::Knob (juce::RangedAudioParameter& parameter, const juce::String& caption,
     slider.setVelocityBasedMode (false);
     slider.setTooltip (parameter.getName (64));
 
-    slider.onValueChange = [this] { refreshReadout(); repaint(); };
+    slider.onValueChange = [this] {
+        refreshReadout();
+        repaint();
+    };
     addAndMakeVisible (slider);
 
     refreshReadout();
@@ -46,7 +50,7 @@ void Knob::setOverrideText (const juce::String& text)
 
 void Knob::setDimmed (bool shouldDim)
 {
-    slider.setEnabled (! shouldDim);
+    slider.setEnabled (!shouldDim);
     setAlpha (shouldDim ? 0.5f : 1.0f);
 }
 
@@ -71,7 +75,7 @@ void Knob::paint (juce::Graphics& g)
     auto area = getLocalBounds();
     auto footer = area.removeFromBottom (isHero ? 34 : 29);
 
-    auto valueRow   = footer.removeFromBottom (isHero ? 19 : 15);
+    auto valueRow = footer.removeFromBottom (isHero ? 19 : 15);
     auto captionRow = footer;
 
     g.setColour (isHero ? Theme::text.withAlpha (0.78f) : Theme::textDim);
@@ -80,6 +84,5 @@ void Knob::paint (juce::Graphics& g)
 
     g.setColour (Theme::tealBright);
     g.setFont (Theme::label (isHero ? 15.0f : 12.0f, true, 0.06f));
-    g.drawText (overrideText.isNotEmpty() ? overrideText : readout,
-                valueRow, juce::Justification::centredTop, false);
+    g.drawText (overrideText.isNotEmpty() ? overrideText : readout, valueRow, juce::Justification::centredTop, false);
 }

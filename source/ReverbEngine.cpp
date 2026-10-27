@@ -5,7 +5,7 @@
 
 namespace
 {
-constexpr float pi    = 3.14159265358979323846f;
+constexpr float pi = 3.14159265358979323846f;
 constexpr float twoPi = 2.0f * pi;
 
 // Line lengths in milliseconds at size 1.0 in a hall; mutually prime enough that
@@ -16,7 +16,7 @@ constexpr std::array<float, 8> lineMs { 23.3f, 29.7f, 37.1f, 43.9f, 51.7f, 59.3f
 constexpr std::array<float, 4> diffuserMs { 4.77f, 6.91f, 8.86f, 11.35f };
 
 // Early reflection pattern, scaled by size and type. Alternating signs widen it.
-constexpr std::array<float, 8> tapMs   { 7.0f, 13.3f, 21.7f, 29.1f, 38.3f, 47.9f, 58.7f, 71.3f };
+constexpr std::array<float, 8> tapMs { 7.0f, 13.3f, 21.7f, 29.1f, 38.3f, 47.9f, 58.7f, 71.3f };
 constexpr std::array<float, 8> tapWeights { 0.84f, -0.72f, 0.66f, -0.58f, 0.5f, -0.42f, 0.36f, -0.3f };
 
 constexpr float maxSizeScale = 1.5f;
@@ -34,12 +34,12 @@ TypeTraits traitsFor (ReverbEngine::Type type) noexcept
 {
     switch (type)
     {
-        case ReverbEngine::Type::room:    return { 0.45f, 0.00f,  0.05f };
-        case ReverbEngine::Type::plate:   return { 0.62f, 0.22f, -0.10f };
-        case ReverbEngine::Type::spring:  return { 0.30f, 0.30f,  0.18f };
-        case ReverbEngine::Type::ambient: return { 0.22f, -0.15f, 0.00f };
-        case ReverbEngine::Type::hall:
-        default:                          return { 1.00f, 0.08f,  0.00f };
+    case ReverbEngine::Type::room: return { 0.45f, 0.00f, 0.05f };
+    case ReverbEngine::Type::plate: return { 0.62f, 0.22f, -0.10f };
+    case ReverbEngine::Type::spring: return { 0.30f, 0.30f, 0.18f };
+    case ReverbEngine::Type::ambient: return { 0.22f, -0.15f, 0.00f };
+    case ReverbEngine::Type::hall:
+    default: return { 1.00f, 0.08f, 0.00f };
     }
 }
 
@@ -55,10 +55,7 @@ inline float onePoleCoef (float cutoffHz, double sampleRate) noexcept
     return std::clamp (c, 0.0f, 1.0f);
 }
 
-inline float dbToGain (float db) noexcept
-{
-    return std::pow (10.0f, db * 0.05f);
-}
+inline float dbToGain (float db) noexcept { return std::pow (10.0f, db * 0.05f); }
 
 /** Deterministic value noise, so the random shape is the same on every run. */
 inline float hashToUnit (float n) noexcept
@@ -69,7 +66,7 @@ inline float hashToUnit (float n) noexcept
     h ^= h >> 13;
     return static_cast<float> (h & 0xffffffu) / static_cast<float> (0xffffffu);
 }
-}
+} // namespace
 
 //==============================================================================
 void ReverbEngine::Line::prepare (int lengthSamples)
@@ -91,20 +88,20 @@ float ReverbEngine::lfoValue (ModShape shape, float ph) noexcept
 
     switch (shape)
     {
-        case ModShape::triangle: return 1.0f - std::fabs (2.0f * p - 1.0f);
+    case ModShape::triangle: return 1.0f - std::fabs (2.0f * p - 1.0f);
 
-        case ModShape::random:
-        {
-            // smoothed value noise: one new target per cycle, eased between
-            const auto cycle = std::floor (ph);
-            const auto a = hashToUnit (cycle);
-            const auto b = hashToUnit (cycle + 1.0f);
-            const auto s = p * p * (3.0f - 2.0f * p);
-            return a + (b - a) * s;
-        }
+    case ModShape::random:
+    {
+        // smoothed value noise: one new target per cycle, eased between
+        const auto cycle = std::floor (ph);
+        const auto a = hashToUnit (cycle);
+        const auto b = hashToUnit (cycle + 1.0f);
+        const auto s = p * p * (3.0f - 2.0f * p);
+        return a + (b - a) * s;
+    }
 
-        case ModShape::sine:
-        default: return 0.5f - 0.5f * std::cos (twoPi * p);
+    case ModShape::sine:
+    default: return 0.5f - 0.5f * std::cos (twoPi * p);
     }
 }
 
@@ -151,9 +148,8 @@ void ReverbEngine::prepare (double newSampleRate, int numChannels)
     const auto blocksPerSecond = static_cast<float> (sampleRate) / static_cast<float> (controlInterval);
     const auto coef = std::clamp (1.0f - std::exp (-1.0f / (0.025f * blocksPerSecond)), 0.0f, 1.0f);
 
-    for (auto* s : { &smSize, &smDecay, &smPreDelay, &smDiffusion, &smEarlyLate, &smLowCut,
-                     &smHighCut, &smDamping, &smTone, &smModDepth, &smModMix, &smDuck,
-                     &smMix, &smWidth, &smLevel, &smModEnable })
+    for (auto* s : { &smSize, &smDecay, &smPreDelay, &smDiffusion, &smEarlyLate, &smLowCut, &smHighCut, &smDamping,
+                     &smTone, &smModDepth, &smModMix, &smDuck, &smMix, &smWidth, &smLevel, &smModEnable })
         s->coef = coef;
 
     // Enabling or bypassing a stage inside the tank has to crossfade, or it clicks.
@@ -161,21 +157,21 @@ void ReverbEngine::prepare (double newSampleRate, int numChannels)
 
     reset();
 
-    smSize     .snap (target.size);
-    smDecay    .snap (target.decaySeconds);
-    smPreDelay .snap (target.preDelayMs);
+    smSize.snap (target.size);
+    smDecay.snap (target.decaySeconds);
+    smPreDelay.snap (target.preDelayMs);
     smDiffusion.snap (target.diffusion);
     smEarlyLate.snap (target.earlyLate);
-    smLowCut   .snap (target.lowCutHz);
-    smHighCut  .snap (target.highCutHz);
-    smDamping  .snap (target.damping);
-    smTone     .snap (target.toneDb);
-    smModDepth .snap (target.modDepth);
-    smModMix   .snap (target.modMix);
-    smDuck     .snap (target.duckDb);
-    smMix      .snap (target.mix);
-    smWidth    .snap (target.width);
-    smLevel    .snap (target.levelGain);
+    smLowCut.snap (target.lowCutHz);
+    smHighCut.snap (target.highCutHz);
+    smDamping.snap (target.damping);
+    smTone.snap (target.toneDb);
+    smModDepth.snap (target.modDepth);
+    smModMix.snap (target.modMix);
+    smDuck.snap (target.duckDb);
+    smMix.snap (target.mix);
+    smWidth.snap (target.width);
+    smLevel.snap (target.levelGain);
     smModEnable.snap (target.modOn ? 1.0f : 0.0f);
 
     const auto scale = traitsFor (target.type).scale * (0.5f + target.size);
@@ -247,7 +243,7 @@ inline float allpassCoef (float frequencyHz, double sampleRate) noexcept
 
     return (t - 1.0f) / (t + 1.0f);
 }
-}
+} // namespace
 
 void ReverbEngine::process (float* const* data, int numChannels, int numSamples) noexcept
 {
@@ -261,7 +257,7 @@ void ReverbEngine::process (float* const* data, int numChannels, int numSamples)
     const auto phaseInc = std::max (0.0f, target.modRateHz) / fs;
     const auto frozen = target.freeze;
 
-    const auto attackCoef  = onePoleCoef (1.0f / (twoPi * 0.005f), sampleRate);
+    const auto attackCoef = onePoleCoef (1.0f / (twoPi * 0.005f), sampleRate);
     const auto releaseCoef = onePoleCoef (1.0f / (twoPi * 0.250f), sampleRate);
 
     float tailPeak = 0.0f;
@@ -271,27 +267,27 @@ void ReverbEngine::process (float* const* data, int numChannels, int numSamples)
         const auto n = std::min (controlInterval, numSamples - start);
 
         // ---- control rate ----
-        const auto size      = smSize     .step (target.size);
-        const auto decay     = std::max (0.05f, smDecay.step (target.decaySeconds));
-        const auto preMs     = smPreDelay .step (target.preDelayMs);
+        const auto size = smSize.step (target.size);
+        const auto decay = std::max (0.05f, smDecay.step (target.decaySeconds));
+        const auto preMs = smPreDelay.step (target.preDelayMs);
         const auto diffusion = std::clamp (smDiffusion.step (target.diffusion) + traits.diffusionBias, 0.0f, 1.0f);
         const auto earlyLate = smEarlyLate.step (target.earlyLate);
-        const auto lowCutHz  = smLowCut   .step (target.lowCutHz);
-        const auto highCutHz = smHighCut  .step (target.highCutHz);
-        const auto damping   = std::clamp (smDamping.step (target.damping) + traits.dampingBias, 0.0f, 1.0f);
-        const auto toneDb    = smTone     .step (target.toneDb);
-        const auto depth     = smModDepth .step (target.modDepth);
-        const auto modMix    = smModMix   .step (target.modMix);
-        const auto duckDb    = smDuck     .step (target.duckDb);
-        const auto mix       = smMix      .step (target.mix);
-        const auto width     = smWidth    .step (target.width);
-        const auto level     = smLevel    .step (target.levelGain);
-        const auto modOn     = smModEnable.step (target.modOn ? 1.0f : 0.0f);
+        const auto lowCutHz = smLowCut.step (target.lowCutHz);
+        const auto highCutHz = smHighCut.step (target.highCutHz);
+        const auto damping = std::clamp (smDamping.step (target.damping) + traits.dampingBias, 0.0f, 1.0f);
+        const auto toneDb = smTone.step (target.toneDb);
+        const auto depth = smModDepth.step (target.modDepth);
+        const auto modMix = smModMix.step (target.modMix);
+        const auto duckDb = smDuck.step (target.duckDb);
+        const auto mix = smMix.step (target.mix);
+        const auto width = smWidth.step (target.width);
+        const auto level = smLevel.step (target.levelGain);
+        const auto modOn = smModEnable.step (target.modOn ? 1.0f : 0.0f);
 
         // The LFO at the end of this block; everything it drives ramps towards it.
         const auto endPhase = phase + phaseInc * static_cast<float> (n);
 
-        const auto modsDelay  = target.modTarget != ModTarget::filter;
+        const auto modsDelay = target.modTarget != ModTarget::filter;
         const auto modsFilter = target.modTarget != ModTarget::delayLines;
 
         // ---- tank geometry ----
@@ -309,8 +305,7 @@ void ReverbEngine::process (float* const* data, int numChannels, int numSamples)
 
             // Decay gain per pass: -60 dB over the decay time for this line's length.
             const auto seconds = lineLength[i] / fs;
-            lineGain[i] = frozen ? 0.9999f
-                                 : std::clamp (std::pow (10.0f, -3.0f * seconds / decay), 0.0f, 0.9995f);
+            lineGain[i] = frozen ? 0.9999f : std::clamp (std::pow (10.0f, -3.0f * seconds / decay), 0.0f, 0.9995f);
         }
 
         auto dampCutoff = dampingCutoffHz (damping);
@@ -318,22 +313,19 @@ void ReverbEngine::process (float* const* data, int numChannels, int numSamples)
         if (modsFilter)
             dampCutoff *= std::exp2 ((lfoValue (target.modShape, endPhase) * 2.0f - 1.0f) * depth * modOn * 1.2f);
 
-        const auto dampCoef = frozen ? 1.0f
-                                     : onePoleCoef (std::clamp (dampCutoff, 200.0f, 20000.0f), sampleRate);
+        const auto dampCoef = frozen ? 1.0f : onePoleCoef (std::clamp (dampCutoff, 200.0f, 20000.0f), sampleRate);
 
         const auto hpCoef = onePoleCoef (lowCutHz, sampleRate);
         const auto lpCoef = onePoleCoef (highCutHz, sampleRate);
         const auto tiltCoef = onePoleCoef (700.0f, sampleRate);
-        const auto lowGain  = dbToGain (-toneDb);
+        const auto lowGain = dbToGain (-toneDb);
         const auto highGain = dbToGain (toneDb);
 
         const auto preDelaySamples = std::max (1.0f, preMs * 0.001f * fs);
         const auto diffuserGain = 0.35f + diffusion * 0.3f;
         const auto inputGate = frozen ? 0.0f : 1.0f;
 
-        const auto duckGain = target.duckOn
-                                  ? dbToGain (duckDb * std::min (1.0f, duckEnvelope * 5.0f))
-                                  : 1.0f;
+        const auto duckGain = target.duckOn ? dbToGain (duckDb * std::min (1.0f, duckEnvelope * 5.0f)) : 1.0f;
 
         // ---- the modulation stage, per channel ----
         const auto vibrato = target.modMode == ModMode::vibrato;
@@ -357,7 +349,7 @@ void ReverbEngine::process (float* const* data, int numChannels, int numSamples)
             }
             else
             {
-                const auto base  = 0.012f * fs;
+                const auto base = 0.012f * fs;
                 const auto swing = (vibrato ? 0.004f : 0.006f) * fs * depth;
                 ch.modDelaySamples.setTarget (base + swing * lfo, n);
             }
@@ -372,12 +364,11 @@ void ReverbEngine::process (float* const* data, int numChannels, int numSamples)
             const auto dryR = nch > 1 ? data[1][i] : dryL;
 
             const auto rectified = std::max (std::fabs (dryL), std::fabs (dryR));
-            duckEnvelope += (rectified > duckEnvelope ? attackCoef : releaseCoef)
-                                * (rectified - duckEnvelope);
+            duckEnvelope += (rectified > duckEnvelope ? attackCoef : releaseCoef) * (rectified - duckEnvelope);
 
             // ---- input: pre-delay, cuts, early reflections, diffusion ----
             std::array<float, maxChannels> tankIn { 0.0f, 0.0f };
-            std::array<float, maxChannels> early  { 0.0f, 0.0f };
+            std::array<float, maxChannels> early { 0.0f, 0.0f };
 
             for (int c = 0; c < nch; ++c)
             {
@@ -473,7 +464,7 @@ void ReverbEngine::process (float* const* data, int numChannels, int numSamples)
 
             if (nch > 1)
             {
-                const auto mid  = (wet[0] + wet[1]) * 0.5f;
+                const auto mid = (wet[0] + wet[1]) * 0.5f;
                 const auto side = (wet[0] - wet[1]) * 0.5f * width;
                 wet[0] = mid + side;
                 wet[1] = mid - side;

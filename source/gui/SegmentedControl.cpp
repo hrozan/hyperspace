@@ -3,7 +3,8 @@
 #include "Theme.h"
 
 SegmentedControl::SegmentedControl (const juce::StringArray& options)
-    : items (options), accent (Theme::teal)
+    : items (options)
+    , accent (Theme::teal)
 {
 }
 
@@ -67,22 +68,20 @@ void SegmentedControl::paint (juce::Graphics& g)
 
     for (int i = 0; i < items.size(); ++i)
     {
-        const auto cell = juce::Rectangle<float> (bounds.getX() + segWidth * static_cast<float> (i),
-                                                  bounds.getY(), segWidth, bounds.getHeight());
+        const auto cell = juce::Rectangle<float> (bounds.getX() + segWidth * static_cast<float> (i), bounds.getY(),
+                                                  segWidth, bounds.getHeight());
 
         if (i == selected)
         {
             juce::Path p;
-            p.addRoundedRectangle (cell.getX(), cell.getY(), cell.getWidth(), cell.getHeight(),
-                                   corner, corner,
-                                   i == 0, i == items.size() - 1,
-                                   i == 0, i == items.size() - 1);
+            p.addRoundedRectangle (cell.getX(), cell.getY(), cell.getWidth(), cell.getHeight(), corner, corner, i == 0,
+                                   i == items.size() - 1, i == 0, i == items.size() - 1);
 
             g.setColour (accent.withAlpha (0.30f));
             g.fillRoundedRectangle (cell.expanded (2.0f), corner + 2.0f);
 
-            g.setGradientFill ({ accent.brighter (0.45f), cell.getX(), cell.getY(),
-                                 accent, cell.getX(), cell.getBottom(), false });
+            g.setGradientFill (
+                { accent.brighter (0.45f), cell.getX(), cell.getY(), accent, cell.getX(), cell.getBottom(), false });
             g.fillPath (p);
         }
         else if (i > 0)
@@ -105,10 +104,9 @@ void SegmentedControl::paint (juce::Graphics& g)
 
 //==============================================================================
 ParameterSegment::ParameterSegment (juce::RangedAudioParameter& parameter, const juce::StringArray& options)
-    : segment (options),
-      attachment (parameter,
-                  [this] (float newValue) { segment.setSelectedIndex (juce::roundToInt (newValue)); },
-                  nullptr)
+    : segment (options)
+    , attachment (
+          parameter, [this] (float newValue) { segment.setSelectedIndex (juce::roundToInt (newValue)); }, nullptr)
 {
     addAndMakeVisible (segment);
     segment.onSelect = [this] (int index) { attachment.setValueAsCompleteGesture (static_cast<float> (index)); };

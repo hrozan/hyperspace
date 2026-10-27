@@ -53,15 +53,11 @@ constexpr auto markSvg = R"SVG(
 /** Adds every control to its panel without naming juce::Component* lists by hand. */
 template <typename... Components>
 void addAll (juce::Component& parent, Components&... items)
-{
-    (parent.addAndMakeVisible (items), ...);
-}
+{ (parent.addAndMakeVisible (items), ...); }
 
 template <typename... Components>
 void fadeAll (float alpha, Components&... items)
-{
-    (items.setAlpha (alpha), ...);
-}
+{ (items.setAlpha (alpha), ...); }
 
 juce::RangedAudioParameter& paramRef (juce::AudioProcessorValueTreeState& state, const char* id)
 {
@@ -74,7 +70,9 @@ juce::RangedAudioParameter& paramRef (juce::AudioProcessorValueTreeState& state,
 class Caption final : public juce::Component
 {
 public:
-    explicit Caption (juce::String t) : text (std::move (t)) { setInterceptsMouseClicks (false, false); }
+    explicit Caption (juce::String t)
+        : text (std::move (t))
+    { setInterceptsMouseClicks (false, false); }
 
     void paint (juce::Graphics& g) override
     {
@@ -92,23 +90,25 @@ class PowerLed final : public juce::Component
 {
 public:
     explicit PowerLed (juce::RangedAudioParameter& p)
-        : attachment (p, [this] (float v) { on = v < 0.5f; repaint(); }, nullptr)
+        : attachment (
+              p,
+              [this] (float v) {
+                  on = v < 0.5f;
+                  repaint();
+              },
+              nullptr)
     {
         attachment.sendInitialUpdate();
         setMouseCursor (juce::MouseCursor::PointingHandCursor);
     }
 
-    void mouseDown (const juce::MouseEvent&) override
-    {
-        attachment.setValueAsCompleteGesture (on ? 1.0f : 0.0f);
-    }
+    void mouseDown (const juce::MouseEvent&) override { attachment.setValueAsCompleteGesture (on ? 1.0f : 0.0f); }
 
     void paint (juce::Graphics& g) override
     {
         auto area = getLocalBounds();
         auto ledArea = area.removeFromTop (area.getHeight() - 12);
-        const auto led = juce::Rectangle<float> (11.0f, 11.0f)
-                             .withCentre (ledArea.toFloat().getCentre());
+        const auto led = juce::Rectangle<float> (11.0f, 11.0f).withCentre (ledArea.toFloat().getCentre());
 
         if (on)
         {
@@ -120,8 +120,8 @@ public:
 
         g.setGradientFill ({ on ? juce::Colour (0xffff8a92) : juce::Colour (0xff4a1a1e),
                              led.getX() + led.getWidth() * 0.36f, led.getY() + led.getHeight() * 0.32f,
-                             on ? juce::Colour (0xff7d0a13) : juce::Colour (0xff1a0608),
-                             led.getCentreX(), led.getBottom(), true });
+                             on ? juce::Colour (0xff7d0a13) : juce::Colour (0xff1a0608), led.getCentreX(),
+                             led.getBottom(), true });
         g.fillEllipse (led);
 
         g.setColour (Theme::textDim);
@@ -138,10 +138,9 @@ private:
 class PresetBar final : public juce::Component
 {
 public:
-    explicit PresetBar (PresetManager& m) : manager (m)
-    {
-        setMouseCursor (juce::MouseCursor::PointingHandCursor);
-    }
+    explicit PresetBar (PresetManager& m)
+        : manager (m)
+    { setMouseCursor (juce::MouseCursor::PointingHandCursor); }
 
     void mouseDown (const juce::MouseEvent& e) override
     {
@@ -173,75 +172,81 @@ public:
 
         g.setColour (Theme::tealBright);
         g.setFont (Theme::label (11.0f, true, 0.2f));
-        g.drawText (manager.getCurrentName().toUpperCase(), display.toNearestInt(),
-                    juce::Justification::centred, false);
+        g.drawText (manager.getCurrentName().toUpperCase(), display.toNearestInt(), juce::Justification::centred,
+                    false);
 
         g.setColour (Theme::textDim);
         g.setFont (juce::FontOptions (13.0f));
-        g.drawText (juce::String::fromUTF8 ("\xe2\x97\x82"),
-                    bounds.removeFromLeft (arrow).toNearestInt(), juce::Justification::centred, false);
-        g.drawText (juce::String::fromUTF8 ("\xe2\x96\xb8"),
-                    bounds.removeFromRight (arrow).toNearestInt(), juce::Justification::centred, false);
+        g.drawText (juce::String::fromUTF8 ("\xe2\x97\x82"), bounds.removeFromLeft (arrow).toNearestInt(),
+                    juce::Justification::centred, false);
+        g.drawText (juce::String::fromUTF8 ("\xe2\x96\xb8"), bounds.removeFromRight (arrow).toNearestInt(),
+                    juce::Justification::centred, false);
     }
 
 private:
     PresetManager& manager;
 };
-}
+} // namespace
 
 //==============================================================================
-class HyperspaceEditor::Content final : public juce::Component,
-                                        private juce::Timer
+class HyperspaceEditor::Content final : public juce::Component, private juce::Timer
 {
 public:
     explicit Content (HyperspaceProcessor& p)
-        : proc (p), state (p.getValueTreeState()),
-          enginePanel  ("REVERB ENGINE", 32, false),
-          tonePanel    ("TONE & DAMPING"),
-          modPanel     ("MODULATION", 32, false),
-          preAmpPanel  ("PRE AMP", 29, false),
-          tailPanel    ("REVERB TAIL", 29, false),
-          outputPanel  ("OUTPUT"),
-          decay     (paramRef (state, ParamID::decay),     "DECAY",      Theme::teal, true),
-          size      (paramRef (state, ParamID::size),      "SIZE",       Theme::teal),
-          preDelay  (paramRef (state, ParamID::preDelay),  "PRE-DLY",    Theme::teal),
-          diffusion (paramRef (state, ParamID::diffusion), "DIFFUSE",    Theme::teal),
-          earlyLate (paramRef (state, ParamID::earlyLate), "EARLY/LATE", Theme::teal),
-          lowCut    (paramRef (state, ParamID::lowCut),    "LOW CUT",    Theme::teal),
-          highCut   (paramRef (state, ParamID::highCut),   "HIGH CUT",   Theme::teal),
-          damping   (paramRef (state, ParamID::damping),   "DAMP",       Theme::teal),
-          tone      (paramRef (state, ParamID::tone),      "TONE",       Theme::teal),
-          modRate   (paramRef (state, ParamID::modRate),   "RATE",       Theme::teal),
-          modDepth  (paramRef (state, ParamID::modDepth),  "DEPTH",      Theme::teal),
-          modSpread (paramRef (state, ParamID::modSpread), "SPREAD",     Theme::saber),
-          modMix    (paramRef (state, ParamID::modMix),    "MOD MIX",    Theme::teal),
-          preGain   (paramRef (state, ParamID::preGain),   "GAIN",       Theme::teal),
-          preTone   (paramRef (state, ParamID::preTone),   "TONE",       Theme::teal),
-          preOutput (paramRef (state, ParamID::preOutput), "OUTPUT",     Theme::teal),
-          duck      (paramRef (state, ParamID::duck),      "DUCK",       Theme::saber),
-          mix       (paramRef (state, ParamID::mix),       "MIX",        Theme::teal),
-          width     (paramRef (state, ParamID::width),     "WIDTH",      Theme::teal),
-          level     (paramRef (state, ParamID::level),     "LEVEL",      Theme::teal),
-          typeSegment     (paramRef (state, ParamID::reverbType),   { "ROOM", "HALL", "PLATE", "SPRING", "AMB" }),
-          preSyncSegment  (paramRef (state, ParamID::preDelaySync), Params::preSyncChoices),
-          modeSegment     (paramRef (state, ParamID::modMode),      { "CHORUS", "VIBRATO", "PHASER" }),
-          shapeSegment    (paramRef (state, ParamID::modShape),     { "SINE", "TRI", "RND" }),
-          targetSegment   (paramRef (state, ParamID::modTarget),    { "DELAY", "FILTER", "BOTH" }),
-          rateSyncSegment (paramRef (state, ParamID::modSync),      Params::rateSyncChoices),
-          preSyncCaption ("PRE-DELAY SYNC"), shapeCaption ("SHAPE"), targetCaption ("TARGET"),
-          rateSyncCaption ("RATE SYNC"), driveCaption ("DRIVE"), modeCaption ("MODE"),
-          response (state), modDisplay (p), tailDisplay (p),
-          meter ([&p] (int ch) { return p.getOutputPeak (ch); }),
-          drive ([&p] { return p.getDrive(); }),
-          modSwitch     (paramRef (state, ParamID::modOn),     "ON",     Theme::teal),
-          preAmpSwitch  (paramRef (state, ParamID::preAmpOn),  "ON",     Theme::teal),
-          freezeSwitch  (paramRef (state, ParamID::freeze),    "FREEZE", Theme::teal),
-          duckSwitch    (paramRef (state, ParamID::duckOn),    "DUCK",   Theme::teal),
-          presets (p.getPresetManager()),
-          newPreset   (IconButton::Icon::plus,  "New preset",    Theme::teal),
-          savePreset  (IconButton::Icon::save,  "Save preset",   Theme::text.withAlpha (0.75f)),
-          deletePreset(IconButton::Icon::trash, "Delete preset", Theme::text.withAlpha (0.75f)),
-          power (paramRef (state, ParamID::bypass))
+        : proc (p)
+        , state (p.getValueTreeState())
+        , enginePanel ("REVERB ENGINE", 32, false)
+        , tonePanel ("TONE & DAMPING")
+        , modPanel ("MODULATION", 32, false)
+        , preAmpPanel ("PRE AMP", 29, false)
+        , tailPanel ("REVERB TAIL", 29, false)
+        , outputPanel ("OUTPUT")
+        , decay (paramRef (state, ParamID::decay), "DECAY", Theme::teal, true)
+        , size (paramRef (state, ParamID::size), "SIZE", Theme::teal)
+        , preDelay (paramRef (state, ParamID::preDelay), "PRE-DLY", Theme::teal)
+        , diffusion (paramRef (state, ParamID::diffusion), "DIFFUSE", Theme::teal)
+        , earlyLate (paramRef (state, ParamID::earlyLate), "EARLY/LATE", Theme::teal)
+        , lowCut (paramRef (state, ParamID::lowCut), "LOW CUT", Theme::teal)
+        , highCut (paramRef (state, ParamID::highCut), "HIGH CUT", Theme::teal)
+        , damping (paramRef (state, ParamID::damping), "DAMP", Theme::teal)
+        , tone (paramRef (state, ParamID::tone), "TONE", Theme::teal)
+        , modRate (paramRef (state, ParamID::modRate), "RATE", Theme::teal)
+        , modDepth (paramRef (state, ParamID::modDepth), "DEPTH", Theme::teal)
+        , modSpread (paramRef (state, ParamID::modSpread), "SPREAD", Theme::saber)
+        , modMix (paramRef (state, ParamID::modMix), "MOD MIX", Theme::teal)
+        , preGain (paramRef (state, ParamID::preGain), "GAIN", Theme::teal)
+        , preTone (paramRef (state, ParamID::preTone), "TONE", Theme::teal)
+        , preOutput (paramRef (state, ParamID::preOutput), "OUTPUT", Theme::teal)
+        , duck (paramRef (state, ParamID::duck), "DUCK", Theme::saber)
+        , mix (paramRef (state, ParamID::mix), "MIX", Theme::teal)
+        , width (paramRef (state, ParamID::width), "WIDTH", Theme::teal)
+        , level (paramRef (state, ParamID::level), "LEVEL", Theme::teal)
+        , typeSegment (paramRef (state, ParamID::reverbType), { "ROOM", "HALL", "PLATE", "SPRING", "AMB" })
+        , preSyncSegment (paramRef (state, ParamID::preDelaySync), Params::preSyncChoices)
+        , modeSegment (paramRef (state, ParamID::modMode), { "CHORUS", "VIBRATO", "PHASER" })
+        , shapeSegment (paramRef (state, ParamID::modShape), { "SINE", "TRI", "RND" })
+        , targetSegment (paramRef (state, ParamID::modTarget), { "DELAY", "FILTER", "BOTH" })
+        , rateSyncSegment (paramRef (state, ParamID::modSync), Params::rateSyncChoices)
+        , preSyncCaption ("PRE-DELAY SYNC")
+        , shapeCaption ("SHAPE")
+        , targetCaption ("TARGET")
+        , rateSyncCaption ("RATE SYNC")
+        , driveCaption ("DRIVE")
+        , modeCaption ("MODE")
+        , response (state)
+        , modDisplay (p)
+        , tailDisplay (p)
+        , meter ([&p] (int ch) { return p.getOutputPeak (ch); })
+        , drive ([&p] { return p.getDrive(); })
+        , modSwitch (paramRef (state, ParamID::modOn), "ON", Theme::teal)
+        , preAmpSwitch (paramRef (state, ParamID::preAmpOn), "ON", Theme::teal)
+        , freezeSwitch (paramRef (state, ParamID::freeze), "FREEZE", Theme::teal)
+        , duckSwitch (paramRef (state, ParamID::duckOn), "DUCK", Theme::teal)
+        , presets (p.getPresetManager())
+        , newPreset (IconButton::Icon::plus, "New preset", Theme::teal)
+        , savePreset (IconButton::Icon::save, "Save preset", Theme::text.withAlpha (0.75f))
+        , deletePreset (IconButton::Icon::trash, "Delete preset", Theme::text.withAlpha (0.75f))
+        , power (paramRef (state, ParamID::bypass))
     {
         if (auto xml = juce::parseXML (markSvg))
             mark = juce::Drawable::createFromSVG (*xml);
@@ -255,27 +260,24 @@ public:
         addAndMakeVisible (deletePreset);
         addAndMakeVisible (power);
 
-        addAll (enginePanel, typeSegment, decay, size, preDelay, diffusion, earlyLate,
-                preSyncCaption, preSyncSegment);
+        addAll (enginePanel, typeSegment, decay, size, preDelay, diffusion, earlyLate, preSyncCaption, preSyncSegment);
         addAll (tonePanel, lowCut, highCut, damping, tone, response);
-        addAll (modPanel, modSwitch, modeCaption, modeSegment, modRate, modDepth, modSpread, modMix,
-                shapeCaption, shapeSegment, targetCaption, targetSegment, rateSyncCaption,
-                rateSyncSegment, modDisplay);
+        addAll (modPanel, modSwitch, modeCaption, modeSegment, modRate, modDepth, modSpread, modMix, shapeCaption,
+                shapeSegment, targetCaption, targetSegment, rateSyncCaption, rateSyncSegment, modDisplay);
         addAll (preAmpPanel, preAmpSwitch, preGain, preTone, preOutput, driveCaption, drive);
         addAll (tailPanel, freezeSwitch, duckSwitch, duck, tailDisplay);
         addAll (outputPanel, mix, width, level, meter);
 
-        modSwitch.onStateChange    = [this] (bool on) { setModActive (on); };
+        modSwitch.onStateChange = [this] (bool on) { setModActive (on); };
         preAmpSwitch.onStateChange = [this] (bool on) { setPreAmpActive (on); };
 
         setModActive (modSwitch.isOn());
         setPreAmpActive (preAmpSwitch.isOn());
         applyMode (currentMode(), true);
 
-        newPreset.onClick  = [this] { promptForName(); };
-        savePreset.onClick = [this]
-        {
-            if (! proc.getPresetManager().overwriteCurrent())
+        newPreset.onClick = [this] { promptForName(); };
+        savePreset.onClick = [this] {
+            if (!proc.getPresetManager().overwriteCurrent())
                 reportFailure ("Could not save the preset.");
         };
         deletePreset.onClick = [this] { confirmDelete(); };
@@ -288,10 +290,7 @@ public:
         setSize (HyperspaceEditor::designWidth, HyperspaceEditor::designHeight);
     }
 
-    ~Content() override
-    {
-        proc.getPresetManager().onChange = nullptr;
-    }
+    ~Content() override { proc.getPresetManager().onChange = nullptr; }
 
     void resized() override
     {
@@ -299,12 +298,12 @@ public:
         header = { 13, 13, 1014, 70 };
         footer = { 13, 622, 1014, 13 };
 
-        enginePanel .setBounds (13,  92, 500, 186);
-        tonePanel   .setBounds (522, 92, 505, 186);
-        modPanel    .setBounds (13, 287, 737, 186);
-        preAmpPanel .setBounds (759, 287, 268, 186);
-        tailPanel   .setBounds (13, 482, 675, 131);
-        outputPanel .setBounds (697, 482, 330, 131);
+        enginePanel.setBounds (13, 92, 500, 186);
+        tonePanel.setBounds (522, 92, 505, 186);
+        modPanel.setBounds (13, 287, 737, 186);
+        preAmpPanel.setBounds (759, 287, 268, 186);
+        tailPanel.setBounds (13, 482, 675, 131);
+        outputPanel.setBounds (697, 482, 330, 131);
 
         // ---- header ----
         markArea = { 29, 24, 48, 48 };
@@ -377,22 +376,20 @@ public:
         g.fillAll();
 
         // crimson rim light above, teal glow below, as in the mockup
-        g.setGradientFill (juce::ColourGradient (Theme::saber.withAlpha (0.12f),
-                                                 bounds.getCentreX(), -bounds.getHeight() * 0.25f,
-                                                 juce::Colours::transparentBlack,
+        g.setGradientFill (juce::ColourGradient (Theme::saber.withAlpha (0.12f), bounds.getCentreX(),
+                                                 -bounds.getHeight() * 0.25f, juce::Colours::transparentBlack,
                                                  bounds.getCentreX(), bounds.getHeight() * 0.62f, true));
         g.fillRect (bounds);
 
-        g.setGradientFill (juce::ColourGradient (Theme::teal.withAlpha (0.10f),
-                                                 bounds.getCentreX(), bounds.getBottom(),
-                                                 juce::Colours::transparentBlack,
-                                                 bounds.getCentreX(), bounds.getHeight() * 0.55f, true));
+        g.setGradientFill (juce::ColourGradient (Theme::teal.withAlpha (0.10f), bounds.getCentreX(), bounds.getBottom(),
+                                                 juce::Colours::transparentBlack, bounds.getCentreX(),
+                                                 bounds.getHeight() * 0.55f, true));
         g.fillRect (bounds);
 
         // ---- header plate ----
         const auto plate = header.toFloat();
-        g.setGradientFill ({ Theme::panelTop, plate.getX(), plate.getY(),
-                             Theme::panelBottom, plate.getX(), plate.getBottom(), false });
+        g.setGradientFill ({ Theme::panelTop, plate.getX(), plate.getY(), Theme::panelBottom, plate.getX(),
+                             plate.getBottom(), false });
         g.fillRoundedRectangle (plate, 5.0f);
         g.setColour (Theme::panelEdge);
         g.drawRoundedRectangle (plate.reduced (0.5f), 5.0f, 1.0f);
@@ -404,13 +401,11 @@ public:
 
         g.setColour (Theme::text);
         g.setFont (Theme::displayFont (30.0f, 0.17f));
-        g.drawText ("HYPERSPACE", juce::Rectangle<int> { 91, 24, 420, 34 },
-                juce::Justification::bottomLeft, false);
+        g.drawText ("HYPERSPACE", juce::Rectangle<int> { 91, 24, 420, 34 }, juce::Justification::bottomLeft, false);
 
         g.setColour (Theme::textDim);
         g.setFont (Theme::label (9.0f, true, 0.42f));
-        g.drawText ("MODULATED REVERB", juce::Rectangle<int> { 91, 58, 420, 12 },
-                juce::Justification::topLeft, false);
+        g.drawText ("MODULATED REVERB", juce::Rectangle<int> { 91, 58, 420, 12 }, juce::Justification::topLeft, false);
 
         // ---- meter caption + footer ----
         g.setColour (Theme::textDim);
@@ -426,8 +421,8 @@ public:
         right.removeFromRight (8);
 
         // juce::String (const char*) decodes as ASCII, so the middle dot needs the UTF-8 pointer
-        g.drawText (juce::String (juce::CharPointer_UTF8 ("VST3  \xc2\xb7  STANDALONE")),
-                    right.removeFromRight (160), juce::Justification::centredRight, false);
+        g.drawText (juce::String (juce::CharPointer_UTF8 ("VST3  \xc2\xb7  STANDALONE")), right.removeFromRight (160),
+                    juce::Justification::centredRight, false);
         g.setColour (Theme::teal.withAlpha (0.85f));
         g.drawText ("v" JucePlugin_VersionString, versionArea, juce::Justification::centredRight, false);
     }
@@ -438,9 +433,8 @@ private:
     {
         modPanel.setActive (on);
 
-        fadeAll (on ? 1.0f : Theme::disabledAlpha,
-                 modeCaption, modeSegment, modRate, modDepth, modSpread, modMix, shapeCaption,
-                 shapeSegment, targetCaption, targetSegment, rateSyncCaption, rateSyncSegment,
+        fadeAll (on ? 1.0f : Theme::disabledAlpha, modeCaption, modeSegment, modRate, modDepth, modSpread, modMix,
+                 shapeCaption, shapeSegment, targetCaption, targetSegment, rateSyncCaption, rateSyncSegment,
                  modDisplay);
     }
 
@@ -465,7 +459,7 @@ private:
     */
     void applyMode (int mode, bool force)
     {
-        if (! force && mode == shownMode)
+        if (!force && mode == shownMode)
             return;
 
         shownMode = mode;
@@ -482,8 +476,7 @@ private:
     /** While a rate or pre-delay follows the host, its knob is no longer in charge. */
     void timerCallback() override
     {
-        const auto choice = [this] (const char* id)
-        {
+        const auto choice = [this] (const char* id) {
             auto* v = state.getRawParameterValue (id);
             return v != nullptr ? juce::roundToInt (v->load()) : 0;
         };
@@ -491,7 +484,7 @@ private:
         applyMode (currentMode(), false);
 
         const auto rateSynced = SyncMath::isSynced (choice (ParamID::modSync));
-        const auto preSynced  = SyncMath::isSynced (choice (ParamID::preDelaySync));
+        const auto preSynced = SyncMath::isSynced (choice (ParamID::preDelaySync));
 
         if (rateSynced != wasRateSynced)
         {
@@ -505,30 +498,25 @@ private:
             wasPreSynced = preSynced;
         }
 
-        modRate.setOverrideText (rateSynced ? juce::String (proc.getEffectiveRateHz(), 2) + " Hz"
-                                            : juce::String());
+        modRate.setOverrideText (rateSynced ? juce::String (proc.getEffectiveRateHz(), 2) + " Hz" : juce::String());
         preDelay.setOverrideText (preSynced ? juce::String (juce::roundToInt (proc.getEffectivePreDelayMs())) + " ms"
                                             : juce::String());
     }
 
     static void reportFailure (const juce::String& message)
-    {
-        juce::AlertWindow::showMessageBoxAsync (juce::MessageBoxIconType::WarningIcon,
-                                                "Hyperspace", message);
-    }
+    { juce::AlertWindow::showMessageBoxAsync (juce::MessageBoxIconType::WarningIcon, "Hyperspace", message); }
 
     void presetChanged()
     {
         const auto factory = proc.getPresetManager().currentIsFactory();
-        savePreset.setEnabled (! factory);
-        deletePreset.setEnabled (! factory);
+        savePreset.setEnabled (!factory);
+        deletePreset.setEnabled (!factory);
         presets.repaint();
     }
 
     void promptForName()
     {
-        auto* window = new juce::AlertWindow ("New Preset", "Name this preset",
-                                              juce::MessageBoxIconType::NoIcon);
+        auto* window = new juce::AlertWindow ("New Preset", "Name this preset", juce::MessageBoxIconType::NoIcon);
         window->addTextEditor ("name", proc.getPresetManager().getCurrentName());
         window->addButton ("Save", 1, juce::KeyPress (juce::KeyPress::returnKey));
         window->addButton ("Cancel", 0, juce::KeyPress (juce::KeyPress::escapeKey));
@@ -536,17 +524,16 @@ private:
         juce::Component::SafePointer<Content> safeThis { this };
         juce::Component::SafePointer<juce::AlertWindow> safeWindow { window };
 
-        window->enterModalState (true, juce::ModalCallbackFunction::create (
-            [safeThis, safeWindow] (int result)
-            {
+        window->enterModalState (
+            true, juce::ModalCallbackFunction::create ([safeThis, safeWindow] (int result) {
                 if (result != 1 || safeThis == nullptr || safeWindow == nullptr)
                     return;
 
-                if (! safeThis->proc.getPresetManager().saveAs (safeWindow->getTextEditorContents ("name")))
-                    safeThis->reportFailure ("Could not save the preset. Check that "
-                                             + PresetManager::directory().getFullPathName()
-                                             + " is writable.");
-            }), true);
+                if (!safeThis->proc.getPresetManager().saveAs (safeWindow->getTextEditorContents ("name")))
+                    safeThis->reportFailure ("Could not save the preset. Check that " +
+                                             PresetManager::directory().getFullPathName() + " is writable.");
+            }),
+            true);
     }
 
     void confirmDelete()
@@ -558,19 +545,16 @@ private:
 
         juce::Component::SafePointer<Content> safeThis { this };
 
-        juce::AlertWindow::showOkCancelBox (
-            juce::MessageBoxIconType::WarningIcon, "Delete Preset",
-            "Move \"" + manager.getCurrentName() + "\" to the trash?",
-            "Delete", "Cancel", nullptr,
-            juce::ModalCallbackFunction::create (
-                [safeThis] (int result)
-                {
-                    if (result != 1 || safeThis == nullptr)
-                        return;
+        juce::AlertWindow::showOkCancelBox (juce::MessageBoxIconType::WarningIcon, "Delete Preset",
+                                            "Move \"" + manager.getCurrentName() + "\" to the trash?", "Delete",
+                                            "Cancel", nullptr,
+                                            juce::ModalCallbackFunction::create ([safeThis] (int result) {
+                                                if (result != 1 || safeThis == nullptr)
+                                                    return;
 
-                    if (! safeThis->proc.getPresetManager().deleteCurrent())
-                        safeThis->reportFailure ("Could not move the preset to the trash.");
-                }));
+                                                if (!safeThis->proc.getPresetManager().deleteCurrent())
+                                                    safeThis->reportFailure ("Could not move the preset to the trash.");
+                                            }));
     }
 
     HyperspaceProcessor& proc;
@@ -581,8 +565,7 @@ private:
     Knob lowCut, highCut, damping, tone;
     Knob modRate, modDepth, modSpread, modMix;
     Knob preGain, preTone, preOutput, duck, mix, width, level;
-    ParameterSegment typeSegment, preSyncSegment, modeSegment, shapeSegment, targetSegment,
-                     rateSyncSegment;
+    ParameterSegment typeSegment, preSyncSegment, modeSegment, shapeSegment, targetSegment, rateSyncSegment;
     Caption preSyncCaption, shapeCaption, targetCaption, rateSyncCaption, driveCaption, modeCaption;
     ResponseDisplay response;
     ModDisplay modDisplay;
@@ -623,10 +606,7 @@ HyperspaceEditor::~HyperspaceEditor()
     setLookAndFeel (nullptr);
 }
 
-void HyperspaceEditor::paint (juce::Graphics& g)
-{
-    g.fillAll (Theme::background);
-}
+void HyperspaceEditor::paint (juce::Graphics& g) { g.fillAll (Theme::background); }
 
 void HyperspaceEditor::resized()
 {

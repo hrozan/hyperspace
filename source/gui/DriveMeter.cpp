@@ -35,16 +35,16 @@ void DriveMeter::paint (juce::Graphics& g)
     g.drawRoundedRectangle (bounds.reduced (0.5f), 3.0f, 1.0f);
 
     const auto db = juce::Decibels::gainToDecibels (displayed, -60.0f);
-    const auto lit = juce::roundToInt (juce::jmap (juce::jlimit (-24.0f, 6.0f, db),
-                                                   -24.0f, 6.0f, 0.0f, static_cast<float> (segments)));
+    const auto lit = juce::roundToInt (
+        juce::jmap (juce::jlimit (-24.0f, 6.0f, db), -24.0f, 6.0f, 0.0f, static_cast<float> (segments)));
 
     const auto inner = bounds.reduced (2.0f);
     const auto cell = inner.getWidth() / static_cast<float> (segments);
 
     for (int s = 0; s < segments; ++s)
     {
-        const auto seg = juce::Rectangle<float> (inner.getX() + static_cast<float> (s) * cell,
-                                                 inner.getY(), cell - 2.0f, inner.getHeight());
+        const auto seg = juce::Rectangle<float> (inner.getX() + static_cast<float> (s) * cell, inner.getY(),
+                                                 cell - 2.0f, inner.getHeight());
 
         if (s < lit)
         {

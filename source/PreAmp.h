@@ -17,10 +17,10 @@ public:
 
     struct Settings
     {
-        bool  enabled   = true;
-        float gainDb    = 6.0f;    // drive into the saturation
-        float toneDb    = 2.0f;    // tilt around 700 Hz, negative is darker
-        float outputDb  = -2.0f;   // trim after it
+        bool enabled = true;
+        float gainDb = 6.0f;    // drive into the saturation
+        float toneDb = 2.0f;    // tilt around 700 Hz, negative is darker
+        float outputDb = -2.0f; // trim after it
     };
 
     void prepare (double sampleRate, int numChannels);
@@ -38,7 +38,11 @@ private:
     {
         float z = 0.0f;
 
-        inline float lowpass (float x, float coef) noexcept { z += coef * (x - z); return z; }
+        inline float lowpass (float x, float coef) noexcept
+        {
+            z += coef * (x - z);
+            return z;
+        }
         void reset() noexcept { z = 0.0f; }
     };
 
@@ -47,13 +51,17 @@ private:
         float value = 0.0f, coef = 0.2f;
 
         void snap (float v) noexcept { value = v; }
-        inline float step (float t) noexcept { value += coef * (t - value); return value; }
+        inline float step (float t) noexcept
+        {
+            value += coef * (t - value);
+            return value;
+        }
     };
 
     static constexpr int controlInterval = 32;
 
     double sampleRate = 44100.0;
-    int    activeChannels = 2;
+    int activeChannels = 2;
 
     std::array<OnePole, maxChannels> tilt {};
 

@@ -8,7 +8,6 @@ class HyperLookAndFeel final : public juce::LookAndFeel_V4
 public:
     HyperLookAndFeel();
 
-    void drawRotarySlider (juce::Graphics&, int x, int y, int width, int height,
-                           float sliderPos, float startAngle, float endAngle,
-                           juce::Slider&) override;
+    void drawRotarySlider (juce::Graphics&, int x, int y, int width, int height, float sliderPos, float startAngle,
+                           float endAngle, juce::Slider&) override;
 };

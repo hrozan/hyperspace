@@ -13,11 +13,8 @@ inline float onePoleCoef (float cutoffHz, double sampleRate) noexcept
     return std::clamp (c, 0.0f, 1.0f);
 }
 
-inline float dbToGain (float db) noexcept
-{
-    return std::pow (10.0f, db * 0.05f);
-}
-}
+inline float dbToGain (float db) noexcept { return std::pow (10.0f, db * 0.05f); }
+} // namespace
 
 void PreAmp::prepare (double newSampleRate, int numChannels)
 {
@@ -32,8 +29,8 @@ void PreAmp::prepare (double newSampleRate, int numChannels)
 
     reset();
 
-    smGain  .snap (target.gainDb);
-    smTone  .snap (target.toneDb);
+    smGain.snap (target.gainDb);
+    smTone.snap (target.toneDb);
     smOutput.snap (target.outputDb);
     smEnable.snap (target.enabled ? 1.0f : 0.0f);
 }
@@ -64,11 +61,11 @@ void PreAmp::process (float* const* data, int numChannels, int numSamples) noexc
         // Blending the whole stage in and out rather than switching it keeps the
         // bypass silent, and lets gain, tilt and trim ride the same fade.
         const auto enable = smEnable.step (target.enabled ? 1.0f : 0.0f);
-        const auto gain   = dbToGain (smGain.step (target.gainDb) * enable);
+        const auto gain = dbToGain (smGain.step (target.gainDb) * enable);
         const auto toneDb = smTone.step (target.toneDb) * enable;
         const auto output = dbToGain (smOutput.step (target.outputDb) * enable);
 
-        const auto lowGain  = dbToGain (-toneDb);
+        const auto lowGain = dbToGain (-toneDb);
         const auto highGain = dbToGain (toneDb);
 
         for (int k = 0; k < n; ++k)
@@ -81,9 +78,7 @@ void PreAmp::process (float* const* data, int numChannels, int numSamples) noexc
 
                 // tanh is the console curve: unity slope around zero, so clean
                 // settings stay clean, and progressively rounder as it is pushed.
-                const auto saturated = enable > 0.0f
-                                           ? driven + enable * (std::tanh (driven) - driven)
-                                           : driven;
+                const auto saturated = enable > 0.0f ? driven + enable * (std::tanh (driven) - driven) : driven;
 
                 const auto low = tilt[static_cast<size_t> (c)].lowpass (saturated, tiltCoef);
                 data[c][i] = (low * lowGain + (saturated - low) * highGain) * output;

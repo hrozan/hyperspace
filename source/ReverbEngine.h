@@ -16,53 +16,51 @@ class ReverbEngine
 {
 public:
     static constexpr int maxChannels = 2;
-    static constexpr int numLines    = 8;   // feedback delay network size
-    static constexpr int numDiffusers = 4;  // input diffusers per channel
-    static constexpr int numTaps     = 8;   // early reflection taps per channel
-    static constexpr int numAllpass  = 6;   // phaser stages per channel
+    static constexpr int numLines = 8;     // feedback delay network size
+    static constexpr int numDiffusers = 4; // input diffusers per channel
+    static constexpr int numTaps = 8;      // early reflection taps per channel
+    static constexpr int numAllpass = 6;   // phaser stages per channel
 
-    enum class Type      { room = 0, hall, plate, spring, ambient };
-    enum class ModMode   { chorus = 0, vibrato, phaser };
-    enum class ModShape  { sine = 0, triangle, random };
+    enum class Type { room = 0, hall, plate, spring, ambient };
+    enum class ModMode { chorus = 0, vibrato, phaser };
+    enum class ModShape { sine = 0, triangle, random };
     enum class ModTarget { delayLines = 0, filter, both };
 
     struct Settings
     {
-        Type  type         = Type::hall;
+        Type type = Type::hall;
         float decaySeconds = 4.8f;
-        float size         = 0.66f;   // 0..1
-        float preDelayMs   = 75.0f;
-        float diffusion    = 0.74f;   // 0..1
-        float earlyLate    = 0.62f;   // 0 = early only, 1 = tail only
+        float size = 0.66f; // 0..1
+        float preDelayMs = 75.0f;
+        float diffusion = 0.74f; // 0..1
+        float earlyLate = 0.62f; // 0 = early only, 1 = tail only
 
-        float lowCutHz     = 90.0f;
-        float highCutHz    = 7400.0f;
-        float damping      = 0.6f;    // 0..1, high-frequency loss per pass
-        float toneDb       = -1.2f;   // tilt, negative is darker
+        float lowCutHz = 90.0f;
+        float highCutHz = 7400.0f;
+        float damping = 0.6f; // 0..1, high-frequency loss per pass
+        float toneDb = -1.2f; // tilt, negative is darker
 
-        bool      modOn    = true;
-        ModMode   modMode  = ModMode::chorus;
-        ModShape  modShape = ModShape::sine;
-        ModTarget modTarget= ModTarget::delayLines;
-        float     modRateHz= 0.62f;
-        float     modDepth = 0.58f;   // 0..1
-        float     modSpread= 0.8f;    // 0..1, L/R LFO offset in half cycles
-        float     modMix   = 0.5f;    // 0..1, modulated against unmodulated
+        bool modOn = true;
+        ModMode modMode = ModMode::chorus;
+        ModShape modShape = ModShape::sine;
+        ModTarget modTarget = ModTarget::delayLines;
+        float modRateHz = 0.62f;
+        float modDepth = 0.58f; // 0..1
+        float modSpread = 0.8f; // 0..1, L/R LFO offset in half cycles
+        float modMix = 0.5f;    // 0..1, modulated against unmodulated
 
-        bool  freeze       = false;
-        bool  duckOn       = true;
-        float duckDb       = -4.5f;   // full-scale ducking depth
+        bool freeze = false;
+        bool duckOn = true;
+        float duckDb = -4.5f; // full-scale ducking depth
 
-        float mix          = 0.38f;   // 0..1 dry/wet
-        float width        = 1.2f;    // 0..2
-        float levelGain    = 1.0f;    // linear output gain
+        float mix = 0.38f;      // 0..1 dry/wet
+        float width = 1.2f;     // 0..2
+        float levelGain = 1.0f; // linear output gain
     };
 
     /** Damping as the tank's loop cutoff: wide open at 0, down to 1 kHz at 1. */
     static float dampingCutoffHz (float damping) noexcept
-    {
-        return 20000.0f * std::pow (0.05f, damping < 0.0f ? 0.0f : (damping > 1.0f ? 1.0f : damping));
-    }
+    { return 20000.0f * std::pow (0.05f, damping < 0.0f ? 0.0f : (damping > 1.0f ? 1.0f : damping)); }
 
     void prepare (double sampleRate, int numChannels);
     void reset();
@@ -111,10 +109,12 @@ private:
             const auto frac = d - static_cast<float> (whole);
 
             auto i0 = write - whole;
-            if (i0 < 0) i0 += n;
+            if (i0 < 0)
+                i0 += n;
 
             auto i1 = i0 - 1;
-            if (i1 < 0) i1 += n;
+            if (i1 < 0)
+                i1 += n;
 
             const auto a = buffer[static_cast<size_t> (i0)];
             return a + frac * (buffer[static_cast<size_t> (i1)] - a);
@@ -124,7 +124,7 @@ private:
     /** Schroeder all-pass, used for input diffusion and spring dispersion. */
     struct Diffuser
     {
-        Line  line;
+        Line line;
         float delaySamples = 64.0f;
 
         inline float process (float x, float g) noexcept
@@ -141,8 +141,16 @@ private:
     {
         float z = 0.0f;
 
-        inline float lowpass  (float x, float coef) noexcept { z += coef * (x - z); return z; }
-        inline float highpass (float x, float coef) noexcept { z += coef * (x - z); return x - z; }
+        inline float lowpass (float x, float coef) noexcept
+        {
+            z += coef * (x - z);
+            return z;
+        }
+        inline float highpass (float x, float coef) noexcept
+        {
+            z += coef * (x - z);
+            return x - z;
+        }
         void reset() noexcept { z = 0.0f; }
     };
 
@@ -167,12 +175,18 @@ private:
         float value = 0.0f, increment = 0.0f;
 
         void setTarget (float t, int steps) noexcept
-        {
-            increment = steps > 0 ? (t - value) / static_cast<float> (steps) : 0.0f;
-        }
+        { increment = steps > 0 ? (t - value) / static_cast<float> (steps) : 0.0f; }
 
-        inline float next() noexcept { value += increment; return value; }
-        void snap (float v) noexcept { value = v; increment = 0.0f; }
+        inline float next() noexcept
+        {
+            value += increment;
+            return value;
+        }
+        void snap (float v) noexcept
+        {
+            value = v;
+            increment = 0.0f;
+        }
     };
 
     struct Smoothed
@@ -180,17 +194,21 @@ private:
         float value = 0.0f, coef = 0.2f;
 
         void snap (float v) noexcept { value = v; }
-        inline float step (float t) noexcept { value += coef * (t - value); return value; }
+        inline float step (float t) noexcept
+        {
+            value += coef * (t - value);
+            return value;
+        }
     };
 
     struct ChannelState
     {
-        Line  preDelay;
-        Line  early;
+        Line preDelay;
+        Line early;
         std::array<Diffuser, numDiffusers> diffusers {};
         OnePole lowCut, highCut, tone;
-        Line  modDelay;
-        Ramp  modDelaySamples;
+        Line modDelay;
+        Ramp modDelaySamples;
         std::array<Allpass1, numAllpass> phaser {};
         std::array<Ramp, numAllpass> phaserCoef {};
     };
@@ -198,29 +216,28 @@ private:
     static float lfoValue (ModShape, float phase) noexcept;
 
     double sampleRate = 44100.0;
-    int    activeChannels = 2;
+    int activeChannels = 2;
 
     std::array<ChannelState, maxChannels> channels {};
 
     // ---- feedback delay network ----
-    std::array<Line, numLines>    lines {};
-    std::array<float, numLines>   baseSamples {};   // unscaled line lengths
-    std::array<float, numLines>   lineGain {};
+    std::array<Line, numLines> lines {};
+    std::array<float, numLines> baseSamples {}; // unscaled line lengths
+    std::array<float, numLines> lineGain {};
     std::array<OnePole, numLines> lineDamp {};
-    std::array<Ramp, numLines>    lineDelay {};     // scaled length plus modulation
+    std::array<Ramp, numLines> lineDelay {}; // scaled length plus modulation
 
     std::array<std::array<float, numTaps>, maxChannels> tapSamples {};
     std::array<std::array<float, numTaps>, maxChannels> tapGain {};
 
     Settings target {};
 
-    Smoothed smSize, smDecay, smPreDelay, smDiffusion, smEarlyLate, smLowCut, smHighCut,
-             smDamping, smTone, smModDepth, smModMix, smDuck, smMix, smWidth, smLevel,
-             smModEnable;
+    Smoothed smSize, smDecay, smPreDelay, smDiffusion, smEarlyLate, smLowCut, smHighCut, smDamping, smTone, smModDepth,
+        smModMix, smDuck, smMix, smWidth, smLevel, smModEnable;
 
-    float phase = 0.0f;           // shared LFO phase, 0..1
+    float phase = 0.0f; // shared LFO phase, 0..1
     float duckEnvelope = 0.0f;
 
     std::atomic<float> uiPhase { 0.0f };
-    std::atomic<float> uiTail  { 0.0f };
+    std::atomic<float> uiTail { 0.0f };
 };

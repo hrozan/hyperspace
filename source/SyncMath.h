@@ -8,22 +8,20 @@
 namespace SyncMath
 {
 /** Cycle length in beats for each entry of the modulation sync selector. */
-inline constexpr std::array<double, 3> rateDivisionBeats
-{
-    2.0,  // 1/2
-    1.0,  // 1/4
-    0.5   // 1/8
+inline constexpr std::array<double, 3> rateDivisionBeats {
+    2.0, // 1/2
+    1.0, // 1/4
+    0.5  // 1/8
 };
 
 /** Cycle length in beats for each entry of the pre-delay sync selector. */
-inline constexpr std::array<double, 3> preDelayDivisionBeats
-{
+inline constexpr std::array<double, 3> preDelayDivisionBeats {
     0.25, // 1/16
     0.5,  // 1/8
     1.0   // 1/4
 };
 
-inline constexpr int numRateDivisions     = static_cast<int> (rateDivisionBeats.size());
+inline constexpr int numRateDivisions = static_cast<int> (rateDivisionBeats.size());
 inline constexpr int numPreDelayDivisions = static_cast<int> (preDelayDivisionBeats.size());
 
 /** Index 0 of either selector is the free-running entry (FREE / MS). */
@@ -40,7 +38,7 @@ inline double safeBpm (double hostBpm) noexcept { return hostBpm > 0.0 ? hostBpm
 */
 inline float lfoRateHz (int syncMode, float freeRateHz, double hostBpm) noexcept
 {
-    if (! isSynced (syncMode))
+    if (!isSynced (syncMode))
         return freeRateHz;
 
     const auto index = std::clamp (syncMode - 1, 0, numRateDivisions - 1);
@@ -52,7 +50,7 @@ inline float lfoRateHz (int syncMode, float freeRateHz, double hostBpm) noexcept
 /** Pre-delay in milliseconds, either the knob value or the synced division. */
 inline float preDelayMs (int syncMode, float freeMs, double hostBpm) noexcept
 {
-    if (! isSynced (syncMode))
+    if (!isSynced (syncMode))
         return freeMs;
 
     const auto index = std::clamp (syncMode - 1, 0, numPreDelayDivisions - 1);
@@ -60,4 +58,4 @@ inline float preDelayMs (int syncMode, float freeMs, double hostBpm) noexcept
 
     return static_cast<float> (beats * 60000.0 / safeBpm (hostBpm));
 }
-}
+} // namespace SyncMath

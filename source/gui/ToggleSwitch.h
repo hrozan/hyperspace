@@ -6,8 +6,7 @@
 #include <functional>
 
 /** Lit-dot switch from the mockup: ON, FREEZE and DUCK all use it. */
-class ToggleSwitch final : public juce::Component,
-                           public juce::SettableTooltipClient
+class ToggleSwitch final : public juce::Component, public juce::SettableTooltipClient
 {
 public:
     ToggleSwitch (juce::RangedAudioParameter&, const juce::String& caption, juce::Colour accent);

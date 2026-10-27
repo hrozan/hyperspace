@@ -7,8 +7,7 @@
 class Knob final : public juce::Component
 {
 public:
-    Knob (juce::RangedAudioParameter& parameter, const juce::String& caption,
-          juce::Colour accent, bool hero = false);
+    Knob (juce::RangedAudioParameter& parameter, const juce::String& caption, juce::Colour accent, bool hero = false);
 
     void resized() override;
     void paint (juce::Graphics&) override;

@@ -2,23 +2,20 @@
 
 #include "Presets.h"
 
-PresetManager::PresetManager (juce::AudioProcessorValueTreeState& s) : state (s)
-{
-    refresh();
-}
+PresetManager::PresetManager (juce::AudioProcessorValueTreeState& s)
+    : state (s)
+{ refresh(); }
 
 juce::File PresetManager::directory()
 {
     // On macOS userApplicationDataDirectory is ~/Library, not ~/Library/Application Support.
     auto base = juce::File::getSpecialLocation (juce::File::userApplicationDataDirectory);
 
-   #if JUCE_MAC
+#if JUCE_MAC
     base = base.getChildFile ("Application Support");
-   #endif
+#endif
 
-    return base.getChildFile ("Rozan Audio")
-        .getChildFile ("Hyperspace")
-        .getChildFile ("Presets");
+    return base.getChildFile ("Rozan Audio").getChildFile ("Hyperspace").getChildFile ("Presets");
 }
 
 void PresetManager::refresh()
@@ -67,7 +64,7 @@ bool PresetManager::currentIsFactory() const
 
 void PresetManager::load (int index)
 {
-    if (! juce::isPositiveAndBelow (index, static_cast<int> (entries.size())))
+    if (!juce::isPositiveAndBelow (index, static_cast<int> (entries.size())))
         return;
 
     current = index;
@@ -105,20 +102,20 @@ bool PresetManager::saveAs (const juce::String& name)
 
     auto dir = directory();
 
-    if (! dir.isDirectory() && ! dir.createDirectory().wasOk())
+    if (!dir.isDirectory() && !dir.createDirectory().wasOk())
         return false;
 
     auto file = dir.getChildFile (juce::File::createLegalFileName (trimmed) + fileExtension());
 
     const auto xml = state.copyState().createXml();
 
-    if (xml == nullptr || ! xml->writeTo (file))
+    if (xml == nullptr || !xml->writeTo (file))
         return false;
 
     refresh();
 
     for (size_t i = 0; i < entries.size(); ++i)
-        if (! entries[i].isFactory && entries[i].file == file)
+        if (!entries[i].isFactory && entries[i].file == file)
             current = static_cast<int> (i);
 
     notify();
@@ -140,7 +137,7 @@ bool PresetManager::deleteCurrent()
 
     const auto file = entries[static_cast<size_t> (current)].file;
 
-    if (! file.moveToTrash())
+    if (!file.moveToTrash())
         return false;
 
     const auto previous = juce::jmax (0, current - 1);
