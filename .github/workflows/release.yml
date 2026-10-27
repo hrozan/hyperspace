@@ -1,21 +1,20 @@
-name: Build
+name: Release
 
 on:
   push:
-    branches: [main]
-  pull_request:
+    tags: ['v*']
   workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 env:
   BUILD_TYPE: Release
 
 jobs:
   build:
-    name: ${{ matrix.name }}
+    name: Build (${{ matrix.name }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -36,8 +35,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # JUCE needs the X11, ALSA and FreeType development headers on Linux; the
-      # macOS and Windows runners already ship everything it links against.
+      # JUCE needs the X11, ALSA and FreeType development headers on Linux, and
+      # pkg-configs webkit2gtk even with JUCE_WEB_BROWSER=0 — which is why this
+      # job pins 22.04, the last image that still carries webkit2gtk-4.0.
       - name: Install Linux dependencies
         if: runner.os == 'Linux'
         run: |
@@ -75,11 +75,53 @@ jobs:
       - name: Test
         run: ctest --test-dir build --build-config ${{ env.BUILD_TYPE }} --output-on-failure
 
-      - name: Upload artefacts
-        uses: actions/upload-artifact@v4
+      # tar on macOS and Linux rather than zip: the .vst3 and .app are bundles of
+      # symlinks and executables, and tar is the format that keeps both intact.
+      - name: Package (macOS / Linux)
+        if: runner.os != 'Windows'
+        run: |
+          cd "build/Hyperspace_artefacts/${{ env.BUILD_TYPE }}"
+          tar czf "$GITHUB_WORKSPACE/Hyperspace-${{ matrix.name }}.tar.gz" \
+            VST3/Hyperspace.vst3 Standalone/*
+
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $src = "build/Hyperspace_artefacts/${{ env.BUILD_TYPE }}"
+          Compress-Archive -Path "$src/VST3/Hyperspace.vst3", "$src/Standalone/*" `
+            -DestinationPath "Hyperspace-${{ matrix.name }}.zip"
+
+      - uses: actions/upload-artifact@v4
         with:
           name: Hyperspace-${{ matrix.name }}
           path: |
-            build/Hyperspace_artefacts/**/VST3/**
-            build/Hyperspace_artefacts/**/Standalone/**
+            Hyperspace-${{ matrix.name }}.tar.gz
+            Hyperspace-${{ matrix.name }}.zip
           if-no-files-found: error
+
+  publish:
+    name: Publish release
+    needs: build
+    runs-on: ubuntu-24.04
+    # Only a tag gets a GitHub release; a manual run just leaves the artefacts
+    # attached to the workflow run.
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ls -la dist
+          gh release create "${{ github.ref_name }}" \
+            --repo "${{ github.repository }}" \
+            --title "Hyperspace ${{ github.ref_name }}" \
+            --generate-notes \
+            dist/*

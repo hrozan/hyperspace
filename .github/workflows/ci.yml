@@ -1,0 +1,120 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Pinned so CI and a developer's machine format identically. A different
+  # clang-format release would flag lines the other one is perfectly happy with.
+  CLANG_FORMAT_VERSION: 23.1.2
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install clang-format
+        run: |
+          pip install "clang-format==$CLANG_FORMAT_VERSION"
+          sudo curl -fsSL -o /usr/local/bin/git-clang-format \
+            "https://raw.githubusercontent.com/llvm/llvm-project/llvmorg-$CLANG_FORMAT_VERSION/clang/tools/clang-format/git-clang-format"
+          sudo chmod +x /usr/local/bin/git-clang-format
+          clang-format --version
+
+      # Only the lines a commit actually touches are checked. The code predates
+      # .clang-format, and reformatting all of it would bury every later review
+      # diff under the churn, so the rule applies to new work instead.
+      - name: clang-format changed lines
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base="${{ github.event.pull_request.base.sha }}"
+          else
+            base="${{ github.event.before }}"
+          fi
+
+          if [ -z "$base" ] || ! git cat-file -e "${base}^{commit}" 2>/dev/null; then
+            base="$(git rev-parse --verify --quiet HEAD~1 || true)"
+          fi
+
+          if [ -z "$base" ]; then
+            echo "No base commit to compare against; nothing to check."
+            exit 0
+          fi
+
+          echo "Checking lines changed since $base"
+          out="$(git clang-format --diff --extensions c,cc,cpp,h,hpp "$base" -- source tests)"
+
+          case "$out" in
+            ''|'no modified files to format'*|'clang-format did not modify any files'*)
+              echo "Formatting clean."
+              ;;
+            *)
+              echo "$out"
+              echo "::error::Changed lines are not clang-format clean. Fix with: git clang-format $base"
+              exit 1
+              ;;
+          esac
+
+      - name: Whitespace hygiene
+        run: |
+          rc=0
+          files="$(git ls-files 'source/*' 'tests/*' '*.yml' '*.md' 'CMakeLists.txt')"
+
+          if hits="$(grep -n -e "$(printf '\t')" $files)"; then
+            echo "::error::Tab characters found:"; echo "$hits"; rc=1
+          fi
+
+          if hits="$(grep -nE ' +$' $files)"; then
+            echo "::error::Trailing whitespace found:"; echo "$hits"; rc=1
+          fi
+
+          for f in $files; do
+            if [ -n "$(tail -c1 "$f")" ]; then
+              echo "::error::No newline at end of file: $f"; rc=1
+            fi
+          done
+
+          exit $rc
+
+  test:
+    name: Test (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS
+            os: macos-14
+          - name: Linux
+            os: ubuntu-24.04
+          - name: Windows
+            os: windows-2022
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # HYPERSPACE_BUILD_PLUGIN=OFF drops the JUCE dependency entirely: the two
+      # DSP stages and their tests are plain C++20, so this needs no clone, no
+      # GUI development headers and no cache, and finishes in seconds.
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DHYPERSPACE_BUILD_PLUGIN=OFF
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      - name: Test
+        run: ctest --test-dir build --build-config Release --output-on-failure

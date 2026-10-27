@@ -1,6 +1,6 @@
 # Hyperspace
 
-[![Build](https://github.com/hrozan/hyperspace/actions/workflows/build.yml/badge.svg)](https://github.com/hrozan/hyperspace/actions/workflows/build.yml)
+[![CI](https://github.com/hrozan/hyperspace/actions/workflows/ci.yml/badge.svg)](https://github.com/hrozan/hyperspace/actions/workflows/ci.yml)
 
 A modulated reverb plugin built with [JUCE](https://juce.com) and CMake. Sibling to
 [Darth Phaser](../darth-phaser), whose chassis, knobs and panels it reuses in teal.
@@ -144,6 +144,14 @@ cmake --build build
 
 The first configure clones JUCE, so it takes a few minutes. Subsequent builds are fast.
 
+To work on the DSP alone, turn the plugin off and skip JUCE altogether — this configures and
+builds in a couple of seconds and is exactly what CI runs per commit:
+
+```sh
+cmake -B build-dsp -DHYPERSPACE_BUILD_PLUGIN=OFF
+cmake --build build-dsp && ctest --test-dir build-dsp --output-on-failure
+```
+
 For a faster local iteration loop, build a single architecture and use Debug:
 
 ```sh
@@ -170,11 +178,44 @@ ctest --test-dir build --output-on-failure
 
 ### CI
 
-`.github/workflows/build.yml` builds and tests every push to `main` and every pull request, on
-macOS, Linux and Windows. Each job configures with `-DHYPERSPACE_INSTALL_AFTER_BUILD=OFF` so the
-runner does not try to install into a plugin folder, builds Release, runs `ctest`, and uploads
-the VST3 and the standalone as a per-platform artefact. The JUCE checkout is cached against the
-hash of `CMakeLists.txt`, so bumping the pinned tag refetches it and nothing else does.
+Two workflows, split by cost. Every commit gets the cheap half; the expensive plugin build only
+runs when there is something to ship.
+
+**`.github/workflows/ci.yml` — every push and pull request.**
+
+- *Lint.* `clang-format` against `.clang-format`, but only over the lines a commit actually
+  changes, via `git clang-format`. The code predates the config file and reformatting all of it
+  would bury every later review diff under the churn, so the rule applies to new work instead.
+  Plus a whitespace pass: no tabs, no trailing spaces, newline at end of file.
+- *Test.* macOS, Linux and Windows, each configuring with `-DHYPERSPACE_BUILD_PLUGIN=OFF`. That
+  drops JUCE entirely — the two DSP stages are plain C++20 — so there is no clone, no GUI
+  development headers and no cache to warm, and the job finishes in seconds.
+
+**`.github/workflows/release.yml` — tags matching `v*`, or run by hand.**
+
+Builds the real plugin on all three platforms with `-DHYPERSPACE_INSTALL_AFTER_BUILD=OFF`, runs
+`ctest` again against the full build, and packages the VST3 and standalone per platform —
+`tar.gz` on macOS and Linux, because the `.vst3` and `.app` are bundles whose symlinks and
+executable bits `zip` does not keep, and `.zip` on Windows. On a tag it then opens a GitHub
+release and attaches the three archives. The JUCE checkout is cached against the hash of
+`CMakeLists.txt`, so bumping the pinned tag refetches it and nothing else does.
+
+```sh
+git tag v0.1.0 && git push origin v0.1.0
+```
+
+### Formatting
+
+`.clang-format` is tuned to the style already in the tree — Allman braces, four spaces, a space
+before non-empty argument lists but not `foo()`, aligned consecutive declarations, and no column
+limit, so it never rewraps a line you broke deliberately. Before pushing:
+
+```sh
+git clang-format origin/main
+```
+
+The pinned version is in `ci.yml` (`CLANG_FORMAT_VERSION`); different clang-format releases
+disagree on details, so match it or CI will flag lines your copy is happy with.
 
 `tests/DspTests.cpp` drives both DSP stages directly — no JUCE, no host, no audio device. Each
 reverb case feeds an impulse or a sine and then silence, and asserts the output stays finite and
@@ -289,6 +330,10 @@ The editor matches the mockup, mode colours included.
 ```
 CMakeLists.txt            # build definition, JUCE dependency, plugin metadata
 .clangd                   # points clangd at the generated compile database
+.clang-format             # formatting rules, enforced on changed lines by CI
+.github/workflows/
+  ci.yml                  # lint and DSP tests, every commit
+  release.yml             # plugin build and packaging, on a v* tag
 source/
   ReverbEngine.h/.cpp     # the reverb DSP, free of JUCE
   PreAmp.h/.cpp           # the input stage, also free of JUCE

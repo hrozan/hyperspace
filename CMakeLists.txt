@@ -26,6 +26,25 @@ endif()
 option(HYPERSPACE_INSTALL_AFTER_BUILD
        "Copy the plugin into the user plugin folders after a successful build" ON)
 
+# Neither DSP stage depends on JUCE, so the tests can be configured and run without
+# fetching it. CI's per-commit test job turns the plugin off and builds only those.
+option(HYPERSPACE_BUILD_PLUGIN "Build the JUCE plugin targets" ON)
+
+enable_testing()
+
+add_executable(HyperspaceDspTests
+    tests/DspTests.cpp
+    source/PreAmp.cpp
+    source/ReverbEngine.cpp)
+
+target_compile_features(HyperspaceDspTests PRIVATE cxx_std_20)
+
+add_test(NAME dsp COMMAND HyperspaceDspTests)
+
+if(NOT HYPERSPACE_BUILD_PLUGIN)
+    return()
+endif()
+
 include(FetchContent)
 
 FetchContent_Declare(JUCE
@@ -68,18 +87,6 @@ target_sources(Hyperspace PRIVATE
     source/gui/SegmentedControl.cpp
     source/gui/TailDisplay.cpp
     source/gui/ToggleSwitch.cpp)
-
-# Neither DSP stage depends on JUCE, so both can be built and tested on their own.
-enable_testing()
-
-add_executable(HyperspaceDspTests
-    tests/DspTests.cpp
-    source/PreAmp.cpp
-    source/ReverbEngine.cpp)
-
-target_compile_features(HyperspaceDspTests PRIVATE cxx_std_20)
-
-add_test(NAME dsp COMMAND HyperspaceDspTests)
 
 target_compile_definitions(Hyperspace PUBLIC
     JUCE_WEB_BROWSER=0
